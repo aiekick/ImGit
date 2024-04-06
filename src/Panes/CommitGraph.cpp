@@ -3,7 +3,6 @@
 
 #include "CommitGraph.h"
 #include <ImGuiPack.h>
-#include <Project/ProjectFile.h>
 #include <Models/Gui/GitGui.h>
 
 CommitGraph::CommitGraph() = default;

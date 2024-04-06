@@ -160,7 +160,7 @@ if (USE_SHARED_LIBS)
 	target_compile_definitions(${PROJECT} PRIVATE BUILD_STROCKER_BRIDGE_SHARED_LIBS)
 endif()
 
-set_target_properties(${PROJECT} PROPERTIES OUTPUT_NAME "${PROJECT}_${CMAKE_SYSTEM_NAME}_${ARCH}")
+SetTargetProperties(${PROJECT} OUTPUT_NAME "${PROJECT}_${CMAKE_SYSTEM_NAME}_${ARCH}")
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -206,10 +206,10 @@ target_compile_definitions(${PROJECT} PRIVATE -DPLUGIN_RUNTIME_CONFIG=$<$<CONFIG
 target_compile_definitions(${PROJECT} PRIVATE -DPROJECT_EXT=".stro")
 target_compile_definitions(${PROJECT} PRIVATE -DPROJECT_EXT_DOT_LESS="stro")
 
-set_target_properties(${PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG "${FINAL_BIN_DIR}")
-set_target_properties(${PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${FINAL_BIN_DIR}")
-set_target_properties(${PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${FINAL_BIN_DIR}")
-set_target_properties(${PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${FINAL_BIN_DIR}")
+SetTargetProperties(${PROJECT} RUNTIME_OUTPUT_DIRECTORY_DEBUG "${FINAL_BIN_DIR}")
+SetTargetProperties(${PROJECT} RUNTIME_OUTPUT_DIRECTORY_RELEASE "${FINAL_BIN_DIR}")
+SetTargetProperties(${PROJECT} RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${FINAL_BIN_DIR}")
+SetTargetProperties(${PROJECT} RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${FINAL_BIN_DIR}")
 
 ########################################################
 ############## FORCE BUILD OF PLUGINS ##################
@@ -225,7 +225,7 @@ ENDFOREACH()
 
 ## only for Debug
 add_subdirectory(3rdparty/BuildInc)
-## set_target_properties(BuildInc PROPERTIES FOLDER Tools)
+## SetTargetProperties(BuildInc FOLDER Tools)
 
 add_custom_command(
 	TARGET ${PROJECT} PRE_BUILD
