@@ -30,11 +30,6 @@ private:
 
     bool m_NeedToCloseApp = false;  // when app closing app is required
 
-    bool m_NeedToNewProject = false;
-    bool m_NeedToLoadProject = false;
-    bool m_NeedToCloseProject = false;
-    std::string m_ProjectFileToLoad;
-
     std::function<void(std::set<std::string>)> m_ChangeFunc;
     std::set<std::string> m_PathsToTrack;
 
@@ -55,13 +50,6 @@ public:
     void unit();
 
     bool isThereAnError() const;
-
-    void NeedToNewProject(const std::string& vFilePathName);
-    void NeedToLoadProject(const std::string& vFilePathName);
-    void NeedToCloseProject();
-
-    bool SaveProject();
-    void SaveAsProject(const std::string& vFilePathName);
 
     void PostRenderingActions();
 

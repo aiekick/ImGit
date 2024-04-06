@@ -4,7 +4,6 @@
 #include <Panes/CommitPane.h>
 
 #include <cinttypes>  // printf zu
-#include <Project/ProjectFile.h>
 
 CommitPane::CommitPane() = default;
 CommitPane::~CommitPane() {
@@ -35,9 +34,6 @@ bool CommitPane::DrawPanes(const uint32_t& /*vCurrentFrame*/, bool* vOpened, ImG
             else
                 flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus /* | ImGuiWindowFlags_MenuBar*/;
 #endif
-        }
-
-        if (ProjectFile::Instance()->IsProjectLoaded()) {
         }
 
         ImGui::End();

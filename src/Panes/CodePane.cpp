@@ -3,7 +3,6 @@
 
 #include <Panes/CodePane.h>
 #include <cinttypes>  // printf zu
-#include <Project/ProjectFile.h>
 
 CodePane::CodePane() = default;
 CodePane::~CodePane() {
@@ -35,9 +34,7 @@ bool CodePane::DrawPanes(const uint32_t& /*vCurrentFrame*/, bool* vOpened, ImGui
             else
                 flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus /* | ImGuiWindowFlags_MenuBar*/;
 #endif
-            if (ProjectFile::Instance()->IsProjectLoaded()) {
                 m_CodeEditor.OnImGui();
-            }
         }
 
         ImGui::End();

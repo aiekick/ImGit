@@ -4,7 +4,6 @@
 #include <Panes/ObjectsPane.h>
 
 #include <cinttypes>  // printf zu
-#include <Project/ProjectFile.h>
 
 ObjectsPane::ObjectsPane() = default;
 ObjectsPane::~ObjectsPane() {
@@ -35,9 +34,6 @@ bool ObjectsPane::DrawPanes(const uint32_t& /*vCurrentFrame*/, bool* vOpened, Im
             else
                 flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus /* | ImGuiWindowFlags_MenuBar*/;
 #endif
-        }
-
-        if (ProjectFile::Instance()->IsProjectLoaded()) {
         }
 
         ImGui::End();

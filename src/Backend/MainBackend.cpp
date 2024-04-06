@@ -20,7 +20,6 @@
 #include <stdexcept>  // std::exception
 
 #include <Backend/MainBackend.h>
-#include <Project/ProjectFile.h>
 
 #include <LayoutManager.h>
 
@@ -98,56 +97,9 @@ void MainBackend::unit() {
 bool MainBackend::isThereAnError() const {
     return false;
 }
-
-void MainBackend::NeedToNewProject(const std::string& vFilePathName) {
-    m_NeedToNewProject = true;
-    m_ProjectFileToLoad = vFilePathName;
-}
-
-void MainBackend::NeedToLoadProject(const std::string& vFilePathName) {
-    m_NeedToLoadProject = true;
-    m_ProjectFileToLoad = vFilePathName;
-}
-
-void MainBackend::NeedToCloseProject() {
-    m_NeedToCloseProject = true;
-}
-
-bool MainBackend::SaveProject() {
-    return ProjectFile::Instance()->Save();
-}
-
-void MainBackend::SaveAsProject(const std::string& vFilePathName) {
-    ProjectFile::Instance()->SaveAs(vFilePathName);
-}
-
 // actions to do after rendering
 void MainBackend::PostRenderingActions() {
-    if (m_NeedToNewProject) {
-        ProjectFile::Instance()->Clear();
-        ProjectFile::Instance()->New(m_ProjectFileToLoad);
-        m_ProjectFileToLoad.clear();
-        m_NeedToNewProject = false;
-    }
 
-    if (m_NeedToLoadProject) {
-        if (!m_ProjectFileToLoad.empty()) {
-            if (ProjectFile::Instance()->LoadAs(m_ProjectFileToLoad)) {
-                setAppTitle(m_ProjectFileToLoad);
-                ProjectFile::Instance()->SetProjectChange(false);
-            } else {
-                LogVarError("Failed to load project %s", m_ProjectFileToLoad.c_str());
-            }
-        }
-
-        m_ProjectFileToLoad.clear();
-        m_NeedToLoadProject = false;
-    }
-
-    if (m_NeedToCloseProject) {
-        ProjectFile::Instance()->Clear();
-        m_NeedToCloseProject = false;
-    }
 }
 
 bool MainBackend::IsNeedToCloseApp() {
@@ -238,8 +190,6 @@ void MainBackend::m_RenderOffScreen() {
 void MainBackend::m_MainLoop() {
     int display_w, display_h;
     while (!glfwWindowShouldClose(m_MainWindowPtr)) {
-        {
-            ProjectFile::Instance()->NewFrame();
 
             // maintain active, prevent user change via imgui dialog
             ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;    // Enable Docking
@@ -295,7 +245,6 @@ void MainBackend::m_MainLoop() {
             PostRenderingActions();
 
             ++m_CurrentFrame;
-        }
 
         // will pause the view until we move the mouse or press keys
         // glfwWaitEvents();
@@ -314,38 +263,17 @@ void MainBackend::m_IncFrame() {
 ///////////////////////////////////////////////////////
 
 std::string MainBackend::getXml(const std::string& vOffset, const std::string& vUserDatas) {
-    UNUSED(vUserDatas);
-
     std::string str;
-
     str += MainFrontend::Instance()->getXml(vOffset, vUserDatas);
     str += SettingsDialog::Instance()->getXml(vOffset, vUserDatas);
-    str += vOffset + "<project>" + ProjectFile::Instance()->GetProjectFilepathName() + "</project>\n";
-
+    str += GitGui::Instance()->getXml(vOffset, vUserDatas);
     return str;
 }
 
 bool MainBackend::setFromXml(tinyxml2::XMLElement* vElem, tinyxml2::XMLElement* vParent, const std::string& vUserDatas) {
-    UNUSED(vUserDatas);
-
-    // The value of this child identifies the name of this element
-    std::string strName;
-    std::string strValue;
-    std::string strParentName;
-
-    strName = vElem->Value();
-    if (vElem->GetText())
-        strValue = vElem->GetText();
-    if (vParent != 0)
-        strParentName = vParent->Value();
-
     MainFrontend::Instance()->setFromXml(vElem, vParent, vUserDatas);
     SettingsDialog::Instance()->setFromXml(vElem, vParent, vUserDatas);
-
-    if (strName == "project") {
-        NeedToLoadProject(strValue);
-    }
-
+    GitGui::Instance()->setFromXml(vElem, vParent, vUserDatas);
     return true;
 }
 
@@ -417,11 +345,11 @@ bool MainBackend::m_InitImGui() {
             }
         }
         {  // icon font
-            static const ImWchar icons_ranges[] = {ICON_MIN_STRO, ICON_MIN_STRO, 0};
+            static const ImWchar icons_ranges[] = {ICON_MIN_IMGIT, ICON_MAX_IMGIT, 0};
             ImFontConfig icons_config;
             icons_config.MergeMode = true;
             icons_config.PixelSnapH = true;
-            if (ImGui::GetIO().Fonts->AddFontFromMemoryCompressedBase85TTF(FONT_ICON_BUFFER_NAME_STRO, 15.0f, &icons_config, icons_ranges) == nullptr) {
+            if (ImGui::GetIO().Fonts->AddFontFromMemoryCompressedBase85TTF(FONT_ICON_BUFFER_NAME_IMGIT, 15.0f, &icons_config, icons_ranges) == nullptr) {
                 assert(0);  // failed to load font
             }
         }

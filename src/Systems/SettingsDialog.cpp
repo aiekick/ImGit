@@ -4,8 +4,6 @@
 
 #include <ImGuiPack/ImGuiPack.h>
 
-#include <Project/ProjectFile.h>
-
 bool SettingsDialog::init() {
     /* const auto& pluginSettings = PluginManager::Instance()->GetPluginSettings();
     for (const auto& s : pluginSettings) {
@@ -108,7 +106,6 @@ bool SettingsDialog::m_Save() {
             ptr->SaveSettings();
         }
     }*/
-    ProjectFile::Instance()->SetProjectChange();
     return false;
 }
 

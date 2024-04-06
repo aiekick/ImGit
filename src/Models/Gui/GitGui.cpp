@@ -1,7 +1,6 @@
 #include <Models/Gui/GitGui.h>
 
 #include <Backend/MainBackend.h>
-#include <Project/ProjectFile.h>
 #include <ctools/FileHelper.h>
 
 #include <Models/Git/GitBranch.h>
@@ -103,9 +102,7 @@ bool GitGui::drawDialogs() {
     const auto& displaySize = MainBackend::Instance()->GetDisplaySize();
     if (ImGuiFileDialog::Instance()->Display("OpenNewRepositery", ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking, displaySize * 0.5f, displaySize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
-            if (openLocalRepositery(ImGuiFileDialog::Instance()->GetCurrentPath())) {
-                ProjectFile::Instance()->SetProjectChange();
-            }
+            openLocalRepositery(ImGuiFileDialog::Instance()->GetCurrentPath());
         }
         ImGuiFileDialog::Instance()->Close();
         return true;
@@ -225,4 +222,46 @@ bool GitGui::drawHistory() {
             ImGui::EndTable();
         }
     }
+}
+
+std::string GitGui::getXml(const std::string& vOffset, const std::string& vUserDatas) {
+    std::string res;
+    res += vOffset + "<repositories>\n";
+    for (const auto& repo : m_Repositeries) {
+        if (repo.second != nullptr) {
+            res += vOffset + ct::toStr("\t<repositorie path=\"%s\"/>", repo.second->GetRepoPathName().c_str());
+        }
+    }
+    res += vOffset + "</repositories>\n";
+    return res;
+}
+
+// return true for continue xml parsing of childs in this node or false for interrupt the child exploration (if we want explore child ourselves)
+bool GitGui::setFromXml(tinyxml2::XMLElement* vElem, tinyxml2::XMLElement* vParent, const std::string& vUserDatas) {
+    // The value of this child identifies the name of this element
+    std::string strName;
+    std::string strValue;
+    std::string strParentName;
+
+    strName = vElem->Value();
+    if (vElem->GetText())
+        strValue = vElem->GetText();
+    if (vParent != nullptr)
+        strParentName = vParent->Value();
+
+    if (strParentName == "repositories") {
+        if (strName == "repositorie") {
+            std::string path;
+            for (const tinyxml2::XMLAttribute* attr = vElem->FirstAttribute(); attr != nullptr; attr = attr->Next()) {
+                std::string attName = attr->Name();
+                std::string attValue = attr->Value();
+                if (attName == "path") {
+                    path = attValue;
+                }
+            }
+            openLocalRepositery(path);
+        }
+    }
+
+    return true;
 }

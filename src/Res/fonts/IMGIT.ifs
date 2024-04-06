@@ -1,0 +1,176 @@
+<config>
+	<project>
+		<font name="MaterialDesignIcons.ttf">
+			<glyphs>
+				<glyph orgId="61479" newId="61479" orgName="alert-box" newName="alert-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="61499" newId="61499" orgName="apps" newName="apps" trans="0;0" scale="1;1"/>
+				<glyph orgId="61500" newId="61500" orgName="archive" newName="archive" trans="0;0" scale="1;1"/>
+				<glyph orgId="61510" newId="61510" orgName="arrow-down-thick" newName="arrow-down-thick" trans="0;0" scale="1;1"/>
+				<glyph orgId="61516" newId="61516" orgName="arrow-expand-all" newName="arrow-expand-all" trans="0;0" scale="1;1"/>
+				<glyph orgId="61518" newId="61518" orgName="arrow-left-thick" newName="arrow-left-thick" trans="0;0" scale="1;1"/>
+				<glyph orgId="61525" newId="61525" orgName="arrow-right-thick" newName="arrow-right-thick" trans="0;0" scale="1;1"/>
+				<glyph orgId="61534" newId="61534" orgName="arrow-up-thick" newName="arrow-up-thick" trans="0;0" scale="1;1"/>
+				<glyph orgId="61608" newId="61608" orgName="bitbucket" newName="bitbucket" trans="0;0" scale="1;1"/>
+				<glyph orgId="61632" newId="61632" orgName="bookmark" newName="bookmark" trans="0;0" scale="1;1"/>
+				<glyph orgId="61736" newId="61736" orgName="chart-bar" newName="chart-bar" trans="0;0" scale="1;1"/>
+				<glyph orgId="61746" newId="61746" orgName="checkbox-marked" newName="checkbox-marked" trans="0;0" scale="1;1"/>
+				<glyph orgId="61782" newId="61782" orgName="close" newName="close" trans="0;0" scale="1;1"/>
+				<glyph orgId="61783" newId="61783" orgName="close-box" newName="close-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="61818" newId="61818" orgName="comment" newName="comment" trans="0;0" scale="1;1"/>
+				<glyph orgId="61819" newId="61819" orgName="comment-account" newName="comment-account" trans="0;0" scale="1;1"/>
+				<glyph orgId="61821" newId="61821" orgName="comment-alert" newName="comment-alert" trans="0;0" scale="1;1"/>
+				<glyph orgId="61823" newId="61823" orgName="comment-check" newName="comment-check" trans="0;0" scale="1;1"/>
+				<glyph orgId="61828" newId="61828" orgName="comment-processing" newName="comment-processing" trans="0;0" scale="1;1"/>
+				<glyph orgId="61832" newId="61832" orgName="comment-text" newName="comment-text" trans="0;0" scale="1;1"/>
+				<glyph orgId="61912" newId="61912" orgName="dots-horizontal" newName="dots-horizontal" trans="0;0" scale="1;1"/>
+				<glyph orgId="61913" newId="61913" orgName="dots-vertical" newName="dots-vertical" trans="0;0" scale="1;1"/>
+				<glyph orgId="61914" newId="61914" orgName="download" newName="download" trans="0;0" scale="1;1"/>
+				<glyph orgId="61960" newId="61960" orgName="eye" newName="eye" trans="0;0" scale="1;1"/>
+				<glyph orgId="61961" newId="61961" orgName="eye-off" newName="eye-off" trans="0;0" scale="1;1"/>
+				<glyph orgId="61972" newId="61972" orgName="file" newName="file" trans="0;0" scale="1;1"/>
+				<glyph orgId="61982" newId="61982" orgName="file-find" newName="file-find" trans="0;0" scale="1;1"/>
+				<glyph orgId="62002" newId="62002" orgName="filter" newName="filter" trans="0;0" scale="1;1"/>
+				<glyph orgId="62004" newId="62004" orgName="filter-remove" newName="filter-remove" trans="0;0" scale="1;1"/>
+				<glyph orgId="62025" newId="62025" orgName="floppy" newName="floppy" trans="0;0" scale="1;1"/>
+				<glyph orgId="62027" newId="62027" orgName="folder" newName="folder" trans="0;0" scale="1;1"/>
+				<glyph orgId="62114" newId="62114" orgName="git" newName="git" trans="0;0" scale="1;1"/>
+				<glyph orgId="62116" newId="62116" orgName="github-circle" newName="github-circle" trans="0;0" scale="1;1"/>
+				<glyph orgId="62301" newId="62301" orgName="menu-down" newName="menu-down" trans="0;0" scale="1;1"/>
+				<glyph orgId="62302" newId="62302" orgName="menu-left" newName="menu-left" trans="0;0" scale="1;1"/>
+				<glyph orgId="62303" newId="62303" orgName="menu-right" newName="menu-right" trans="0;0" scale="1;1"/>
+				<glyph orgId="62304" newId="62304" orgName="menu-up" newName="menu-up" trans="0;0" scale="1;1"/>
+				<glyph orgId="62324" newId="62324" orgName="minus" newName="minus" trans="0;0" scale="1;1"/>
+				<glyph orgId="62325" newId="62325" orgName="minus-box" newName="minus-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="62329" newId="62329" orgName="monitor" newName="monitor" trans="0;0" scale="1;1"/>
+				<glyph orgId="62330" newId="62330" orgName="monitor-multiple" newName="monitor-multiple" trans="0;0" scale="1;1"/>
+				<glyph orgId="62356" newId="62356" orgName="new-box" newName="new-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="62443" newId="62443" orgName="pencil" newName="pencil" trans="0;0" scale="1;1"/>
+				<glyph orgId="62444" newId="62444" orgName="pencil-box" newName="pencil-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="62485" newId="62485" orgName="plus" newName="plus" trans="0;0" scale="1;1"/>
+				<glyph orgId="62514" newId="62514" orgName="qrcode" newName="qrcode" trans="0;0" scale="1;1"/>
+				<glyph orgId="62528" newId="62528" orgName="ray-end" newName="ray-end" trans="0;0" scale="1;1"/>
+				<glyph orgId="62529" newId="62529" orgName="ray-end-arrow" newName="ray-end-arrow" trans="0;0" scale="1;1"/>
+				<glyph orgId="62530" newId="62530" orgName="ray-start" newName="ray-start" trans="0;0" scale="1;1"/>
+				<glyph orgId="62531" newId="62531" orgName="ray-start-arrow" newName="ray-start-arrow" trans="0;0" scale="1;1"/>
+				<glyph orgId="62532" newId="62532" orgName="ray-start-end" newName="ray-start-end" trans="0;0" scale="1;1"/>
+				<glyph orgId="62533" newId="62533" orgName="ray-vertex" newName="ray-vertex" trans="0;0" scale="1;1"/>
+				<glyph orgId="62544" newId="62544" orgName="refresh" newName="refresh" trans="0;0" scale="1;1"/>
+				<glyph orgId="62553" newId="62553" orgName="replay" newName="replay" trans="0;0" scale="1;1"/>
+				<glyph orgId="62554" newId="62554" orgName="reply" newName="reply" trans="0;0" scale="1;1"/>
+				<glyph orgId="62603" newId="62603" orgName="server" newName="server" trans="0;0" scale="1;1"/>
+				<glyph orgId="62611" newId="62611" orgName="settings" newName="settings" trans="0;0" scale="1;1"/>
+				<glyph orgId="62634" newId="62634" orgName="sitemap" newName="sitemap" trans="0;0" scale="1;1"/>
+				<glyph orgId="62657" newId="62657" orgName="source-fork" newName="source-fork" trans="0;0" scale="1;1"/>
+				<glyph orgId="62658" newId="62658" orgName="source-pull" newName="source-pull" trans="0;0" scale="1;1"/>
+				<glyph orgId="62670" newId="62670" orgName="star" newName="star" trans="0;0" scale="1;1"/>
+				<glyph orgId="62722" newId="62722" orgName="television" newName="television" trans="0;0" scale="1;1"/>
+				<glyph orgId="62753" newId="62753" orgName="toggle-switch" newName="toggle-switch" trans="0;0" scale="1;1"/>
+				<glyph orgId="62754" newId="62754" orgName="toggle-switch-off" newName="toggle-switch-off" trans="0;0" scale="1;1"/>
+				<glyph orgId="62915" newId="62915" orgName="youtube" newName="youtube" trans="0;0" scale="1;1"/>
+				<glyph orgId="62942" newId="62942" orgName="comment-remove" newName="comment-remove" trans="0;0" scale="1;1"/>
+				<glyph orgId="62995" newId="62995" orgName="file-hidden" newName="file-hidden" trans="0;0" scale="1;1"/>
+				<glyph orgId="63003" newId="63003" orgName="content-save-settings" newName="content-save-settings" trans="0;0" scale="1;1"/>
+				<glyph orgId="63020" newId="63020" orgName="source-branch" newName="source-branch" trans="0;0" scale="1;1"/>
+				<glyph orgId="63021" newId="63021" orgName="source-merge" newName="source-merge" trans="0;0" scale="1;1"/>
+				<glyph orgId="63022" newId="63022" orgName="tune" newName="tune" trans="0;0" scale="1;1"/>
+				<glyph orgId="63130" newId="63130" orgName="emoticon-dead-outline" newName="emoticon-dead-outline" trans="0;0" scale="1;1"/>
+				<glyph orgId="63131" newId="63131" orgName="emoticon-excited-outline" newName="emoticon-excited-outline" trans="0;0" scale="1;1"/>
+				<glyph orgId="63255" newId="63255" orgName="source-commit" newName="source-commit" trans="0;0" scale="1;1"/>
+				<glyph orgId="63256" newId="63256" orgName="source-commit-end" newName="source-commit-end" trans="0;0" scale="1;1"/>
+				<glyph orgId="63257" newId="63257" orgName="source-commit-end-local" newName="source-commit-end-local" trans="0;0" scale="1;1"/>
+				<glyph orgId="63258" newId="63258" orgName="source-commit-local" newName="source-commit-local" trans="0;0" scale="1;1"/>
+				<glyph orgId="63259" newId="63259" orgName="source-commit-next-local" newName="source-commit-next-local" trans="0;0" scale="1;1"/>
+				<glyph orgId="63260" newId="63260" orgName="source-commit-start" newName="source-commit-start" trans="0;0" scale="1;1"/>
+				<glyph orgId="63261" newId="63261" orgName="source-commit-start-next-local" newName="source-commit-start-next-local" trans="0;0" scale="1;1"/>
+				<glyph orgId="63278" newId="63278" orgName="arrow-down-bold-box" newName="arrow-down-bold-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="63281" newId="63281" orgName="arrow-left-bold-box" newName="arrow-left-bold-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="63284" newId="63284" orgName="arrow-right-bold-box" newName="arrow-right-bold-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="63287" newId="63287" orgName="arrow-up-bold-box" newName="arrow-up-bold-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="63510" newId="63510" orgName="comment-question" newName="comment-question" trans="0;0" scale="1;1"/>
+				<glyph orgId="63889" newId="63889" orgName="plus-minus" newName="plus-minus" trans="0;0" scale="1;1"/>
+				<glyph orgId="63957" newId="63957" orgName="chevron-down-box" newName="chevron-down-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="63959" newId="63959" orgName="chevron-left-box" newName="chevron-left-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="63961" newId="63961" orgName="chevron-right-box" newName="chevron-right-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="63963" newId="63963" orgName="chevron-up-box" newName="chevron-up-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="63968" newId="63968" orgName="comment-arrow-left" newName="comment-arrow-left" trans="0;0" scale="1;1"/>
+				<glyph orgId="63970" newId="63970" orgName="comment-arrow-right" newName="comment-arrow-right" trans="0;0" scale="1;1"/>
+				<glyph orgId="63972" newId="63972" orgName="comment-plus" newName="comment-plus" trans="0;0" scale="1;1"/>
+				<glyph orgId="64006" newId="64006" orgName="monitor-dashboard" newName="monitor-dashboard" trans="0;0" scale="1;1"/>
+				<glyph orgId="64057" newId="64057" orgName="comment-eye" newName="comment-eye" trans="0;0" scale="1;1"/>
+				<glyph orgId="64059" newId="64059" orgName="comment-search" newName="comment-search" trans="0;0" scale="1;1"/>
+				<glyph orgId="64120" newId="64120" orgName="trash-can" newName="trash-can" trans="0;0" scale="1;1"/>
+				<glyph orgId="64380" newId="64380" orgName="gitlab" newName="gitlab" trans="0;0" scale="1;1"/>
+				<glyph orgId="64429" newId="64429" orgName="timeline" newName="timeline" trans="0;0" scale="1;1"/>
+				<glyph orgId="64431" newId="64431" orgName="timeline-text" newName="timeline-text" trans="0;0" scale="1;1"/>
+				<glyph orgId="64683" newId="64683" orgName="source-repository" newName="source-repository" trans="0;0" scale="1;1"/>
+				<glyph orgId="64684" newId="64684" orgName="source-repository-multiple" newName="source-repository-multiple" trans="0;0" scale="1;1"/>
+				<glyph orgId="64758" newId="64758" orgName="link-box" newName="link-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="64760" newId="64760" orgName="link-box-variant" newName="link-box-variant" trans="0;0" scale="1;1"/>
+				<glyph orgId="64792" newId="64792" orgName="transit-connection" newName="transit-connection" trans="0;0" scale="1;1"/>
+				<glyph orgId="64793" newId="64793" orgName="transit-connection-variant" newName="transit-connection-variant" trans="0;0" scale="1;1"/>
+				<glyph orgId="64798" newId="64798" orgName="email-alert-outline" newName="email-alert-outline" trans="0;0" scale="1;1"/>
+				<glyph orgId="64802" newId="64802" orgName="apps-box" newName="apps-box" trans="0;0" scale="1;1"/>
+				<glyph orgId="64940" newId="64940" orgName="format-list-bulleted-square" newName="format-list-bulleted-square" trans="0;0" scale="1;1"/>
+				<glyph orgId="65134" newId="65134" orgName="check-bold" newName="check-bold" trans="0;0" scale="1;1"/>
+				<glyph orgId="65219" newId="65219" orgName="file-document-box-check" newName="file-document-box-check" trans="0;0" scale="1;1"/>
+				<glyph orgId="65221" newId="65221" orgName="file-document-box-minus" newName="file-document-box-minus" trans="0;0" scale="1;1"/>
+				<glyph orgId="65223" newId="65223" orgName="file-document-box-plus" newName="file-document-box-plus" trans="0;0" scale="1;1"/>
+				<glyph orgId="65225" newId="65225" orgName="file-document-box-remove" newName="file-document-box-remove" trans="0;0" scale="1;1"/>
+				<glyph orgId="65227" newId="65227" orgName="file-document-box-search" newName="file-document-box-search" trans="0;0" scale="1;1"/>
+				<glyph orgId="65276" newId="65276" orgName="cpu-32-bit" newName="cpu-32-bit" trans="0;0" scale="1;1"/>
+				<glyph orgId="65277" newId="65277" orgName="cpu-64-bit" newName="cpu-64-bit" trans="0;0" scale="1;1"/>
+				<glyph orgId="65458" newId="65458" orgName="timeline-alert" newName="timeline-alert" trans="0;0" scale="1;1"/>
+				<glyph orgId="65459" newId="65459" orgName="timeline-plus" newName="timeline-plus" trans="0;0" scale="1;1"/>
+				<glyph orgId="65462" newId="65462" orgName="timeline-help" newName="timeline-help" trans="0;0" scale="1;1"/>
+			</glyphs>
+			<prefix>IMGIT</prefix>
+			<genmodeflags>1307</genmodeflags>
+			<pathfilename>MaterialDesignIcons.ttf</pathfilename>
+			<oversample>3</oversample>
+			<fontsize>50</fontsize>
+			<generatedfilename>fontIcons</generatedfilename>
+			<cardglyhpheight>40</cardglyhpheight>
+			<cardcountrowsmax>20</cardcountrowsmax>
+			<rasterizer>1</rasterizer>
+			<freetypeflag>259</freetypeflag>
+			<freetypemultiply>2</freetypemultiply>
+			<padding>16</padding>
+			<filtering>9729</filtering>
+			<enabled>true</enabled>
+			<collapsed>true</collapsed>
+		</font>
+		<rangecoloring show="false" hash="10;15;35;0.5"/>
+		<previewglyphcount>23</previewglyphcount>
+		<previewglyphwidth>78.7391</previewglyphwidth>
+		<mergedfontprefix></mergedfontprefix>
+		<mergedcardglyhpheight>40</mergedcardglyhpheight>
+		<mergedcardcountrowsmax>20</mergedcardcountrowsmax>
+		<curglyphtooltip>true</curglyphtooltip>
+		<srcglyphtooltip>true</srcglyphtooltip>
+		<dstglyphtooltip>true</dstglyphtooltip>
+		<glyphpreviewscale>1</glyphpreviewscale>
+		<glyphdrawingflags>1535</glyphdrawingflags>
+		<glyphpreviewquadbeziercounsegment>0</glyphpreviewquadbeziercounsegment>
+		<glyphpreviewzoomprecision>20</glyphpreviewzoomprecision>
+		<genmodeflags>34075</genmodeflags>
+		<fonttomergein>MaterialDesignIcons.ttf</fonttomergein>
+		<glyphdisplaytuningmode>1</glyphdisplaytuningmode>
+		<sourcefontpaneflags>1</sourcefontpaneflags>
+		<lastgeneratedpath>C:\Gamedev\gitea\ImGit\src\Res</lastgeneratedpath>
+		<lastgeneratedfilename>fontIcons.cpp</lastgeneratedfilename>
+		<zoomglyphs>false</zoomglyphs>
+		<showbaseline>false</showbaseline>
+		<showadvancex>false</showadvancex>
+		<glyphdrawingflags>1535</glyphdrawingflags>
+		<finalselection>
+		</finalselection>
+		<fonttest>
+			<fontsize>100</fontsize>
+			<showbaseline>true</showbaseline>
+			<fontname></fontname>
+			<teststring></teststring>
+			<insertedglyphs>
+			</insertedglyphs>
+		</fonttest>
+	</project>
+</config>
