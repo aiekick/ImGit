@@ -4,5 +4,5 @@
 
 # ImGit
 
-![IMG](https://github.com/aiekick/ImGit/blob/Master/doc/logo.png)
+![IMG](https://github.com/aiekick/ImGit/blob/master/doc/logo.png)
 
