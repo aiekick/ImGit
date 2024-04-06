@@ -4,3 +4,5 @@
 
 # ImGit
 
+![IMG](https://github.com/aiekick/ImGit/blob/Master/doc/logo.png)
+
