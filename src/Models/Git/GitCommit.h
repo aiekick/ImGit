@@ -14,6 +14,10 @@ enum class GitGraphNodeEnum
 	END_NODE				// from bottom to middle with node
 };
 
+class GitCommit;
+typedef std::shared_ptr<GitCommit> GitCommitPtr;
+typedef std::weak_ptr<GitCommit> GitCommitWeak;
+
 typedef int64_t GitDate;
 class GitBranch;
 class GitCommit

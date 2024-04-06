@@ -1,6 +1,8 @@
 #pragma once
 
+#include <ImGuiPack/ImGuiPack.h>
 #include <Models/Git/GitRepositery.h>
+#include <Models/Git/GitCommit.h>
 #include <set>
 #include <string>
 
@@ -12,6 +14,7 @@ private:
     std::map<RepoName, GitRepositeryPtr> m_Repositeries;
     GitRepositeryWeak m_CurrentRepo;
     GitRepositeryWeak m_RepoToCloseDeferred;
+    ImGuiListClipper m_HistoryClipper;
 
 public:
     bool init();
@@ -25,6 +28,11 @@ public:
 
     bool drawRibbon(const float& vHeight);
     bool drawDialogs();
+
+    bool drawHistory();
+
+private:
+    bool m_drawGraphNode(const float& vLastPosX, std::shared_ptr<GitRepositery> vRepositery, std::shared_ptr<GitCommit> vCommit, const float& vTextLineHeight);
 
 public:  // singleton
     static GitGui* Instance() {

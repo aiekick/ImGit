@@ -4,6 +4,10 @@
 
 #include <string>
 
+class GitBranch;
+typedef std::shared_ptr<GitBranch> GitBranchPtr;
+typedef std::weak_ptr<GitBranch> GitBranchWeak;
+
 class GitBranch
 {
 public:

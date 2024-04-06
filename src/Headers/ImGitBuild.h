@@ -1,7 +1,7 @@
 #pragma once
 
 #define ImGit_Prefix "ImGit"
-#define ImGit_BuildNumber 28
+#define ImGit_BuildNumber 35
 #define ImGit_MinorNumber 0
 #define ImGit_MajorNumber 0
-#define ImGit_BuildId "0.0.28"
+#define ImGit_BuildId "0.0.35"

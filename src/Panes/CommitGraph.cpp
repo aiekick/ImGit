@@ -4,6 +4,7 @@
 #include "CommitGraph.h"
 #include <ImGuiPack.h>
 #include <Project/ProjectFile.h>
+#include <Models/Gui/GitGui.h>
 
 CommitGraph::CommitGraph() = default;
 
@@ -39,8 +40,7 @@ bool CommitGraph::DrawPanes(const uint32_t& /*vCurrentFrame*/, bool* vOpened, Im
                 ImGui::EndMenuBar();
             }
 
-            if (ProjectFile::Instance()->IsProjectLoaded()) {
-            }
+            change |= GitGui::Instance()->drawHistory();
         }
 
         ImGui::End();
