@@ -54,8 +54,8 @@ public:
 	std::string GetRepoName() { return m_RepoName; }
 	std::string GetCurrentHistoryBranch() { return m_CurrentHistoryBranch; }
 
-	GitHistoryCollection* GetHistory() { return &m_History; }
-	GitBranchCollection* GetBranchs() { return &m_Branchs; }
+	GitHistoryCollection& GetHistoryRef() { return m_History; }
+	GitBranchCollection& GetBranchsRef() { return m_Branchs; }
 	std::shared_ptr<GitBranch> GetHeadBranch() { return m_HeadBranch; }
 	std::shared_ptr<GitBranch> GetBranch(const std::string& vBranchName);
 	ct::fvec4 GetBranchColorFromIndex(size_t vIndex);

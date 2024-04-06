@@ -116,7 +116,7 @@ bool GitGui::m_drawGraphNode(const float& vLastPosX, GitRepositeryPtr vRepositer
     const auto& margin = 10.0f;
     const auto& win = ImGui::GetCurrentWindow();
     const auto& drawlist = win->DrawList;
-    const auto& colWidth = ImGui::GetColumnWidth();
+    //const auto& colWidth = ImGui::GetColumnWidth();
     const auto& branchColor = vRepositery->GetBranchColorFromIndex(vCommitPtr->graphColumn);
     const auto& finalCol = ImGui::GetColorU32(ImVec4(branchColor.x, branchColor.y, branchColor.z, 1.0f));
     drawlist->AddRectFilled(ImVec2(vLastPosX, win->DC.CursorPos.y + ImGui::GetTextLineHeight() * 0.5f - 1.0f),
@@ -150,78 +150,75 @@ bool GitGui::drawHistory() {
     if (ptr == nullptr) {
         return false;
     }
-    const auto commits_ptr = ptr->GetHistory();
-    if (commits_ptr != nullptr) {
-        if (commits_ptr->empty()) {
-            return false;
-        }
-        static ImGuiTableFlags flags = ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable |
-            ImGuiTableFlags_ScrollY | ImGuiTableFlags_NoHostExtendY;
-        if (ImGui::BeginTable("##gitTable", 6, flags)) {
-            ImGui::TableSetupScrollFreeze(0, 1);  // Make header always visible
-            ImGui::TableSetupColumn("Branch", ImGuiTableColumnFlags_WidthFixed, -1, 0);
-            ImGui::TableSetupColumn("Graph", ImGuiTableColumnFlags_WidthFixed, -1, 1);
-            ImGui::TableSetupColumn("Id", ImGuiTableColumnFlags_WidthFixed, -1, 2);
-            ImGui::TableSetupColumn("Messages", ImGuiTableColumnFlags_WidthStretch, -1, 3);
-            ImGui::TableSetupColumn("Author", ImGuiTableColumnFlags_WidthFixed, -1, 4);
-            ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, -1, 5);
-            ImGui::TableHeadersRow();
-            const auto& textLineHeight = ImGui::GetTextLineHeightWithSpacing();
-            m_HistoryClipper.Begin((int)commits_ptr->size(), textLineHeight);
-            while (m_HistoryClipper.Step()) {
-                for (int i = m_HistoryClipper.DisplayStart; i < m_HistoryClipper.DisplayEnd; i++) {
-                    if (i < 0) {
-                        continue;
+    auto& commits = ptr->GetHistoryRef();
+    if (commits.empty()) {
+        return false;
+    }
+    static ImGuiTableFlags flags = ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable |
+        ImGuiTableFlags_ScrollY | ImGuiTableFlags_NoHostExtendY;
+    if (ImGui::BeginTable("##gitTable", 6, flags)) {
+        ImGui::TableSetupScrollFreeze(0, 1);  // Make header always visible
+        ImGui::TableSetupColumn("Branch", ImGuiTableColumnFlags_WidthFixed, -1, 0);
+        ImGui::TableSetupColumn("Graph", ImGuiTableColumnFlags_WidthFixed, -1, 1);
+        ImGui::TableSetupColumn("Id", ImGuiTableColumnFlags_WidthFixed, -1, 2);
+        ImGui::TableSetupColumn("Messages", ImGuiTableColumnFlags_WidthStretch, -1, 3);
+        ImGui::TableSetupColumn("Author", ImGuiTableColumnFlags_WidthFixed, -1, 4);
+        ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, -1, 5);
+        ImGui::TableHeadersRow();
+        const auto& textLineHeight = ImGui::GetTextLineHeightWithSpacing();
+        m_HistoryClipper.Begin((int)commits.size(), textLineHeight);
+        while (m_HistoryClipper.Step()) {
+            for (int i = m_HistoryClipper.DisplayStart; i < m_HistoryClipper.DisplayEnd; i++) {
+                if (i < 0) {
+                    continue;
+                }
+                const auto infos = commits.at(i);
+                if (!infos.use_count()) {
+                    continue;
+                }
+                if (infos->branch.use_count()) {
+                    ImGui::TableNextRow();
+                    bool selected = false;
+                    float _branchEndPosX = 0.0f;
+                    if (ImGui::TableNextColumn()) {  // branch
+                        const auto& bgCol = ImGui::GetColorU32(ImVec4(infos->branch->color.x, infos->branch->color.y, infos->branch->color.z, 1.0f));
+                        // https://stackoverflow.com/questions/58044749/how-to-right-align-text-in-imgui-columns
+                        const auto& textSize = ImGui::CalcTextSize(infos->branch->name.c_str());
+                        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - textSize.x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
+                        const auto& win = ImGui::GetCurrentWindow();
+                        const auto& pos = win->DC.CursorPos;
+                        const auto& drawlist = win->DrawList;
+                        drawlist->AddRectFilled(
+                            pos - ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f), pos + textSize + ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f), bgCol, 5.0f);
+                        _branchEndPosX = pos.x + textSize.x + ImGui::GetStyle().ItemSpacing.x;
+                        const bool pushed =
+                            ImGui::PushStyleColorWithContrast4(bgCol, ImGuiCol_Text, ImGui::CustomStyle::puContrastedTextColor, ImGui::CustomStyle::puContrastRatio);
+                        ImGui::Text("%s", infos->branch->name.c_str());
+                        if (pushed)
+                            ImGui::PopStyleColor();
                     }
-                    const auto infos = commits_ptr->at(i);
-                    if (!infos.use_count()) {
-                        continue;
+                    if (ImGui::TableNextColumn()) {  // graph
+                        m_drawGraphNode(_branchEndPosX, ptr, infos, textLineHeight);
                     }
-                    if (infos->branch.use_count()) {
-                        ImGui::TableNextRow();
-
-                        bool selected = false;
-
-                        float _branchEndPosX = 0.0f;
-                        if (ImGui::TableNextColumn()) {  // branch
-                            const auto& bgCol = ImGui::GetColorU32(ImVec4(infos->branch->color.x, infos->branch->color.y, infos->branch->color.z, 1.0f));
-                            // https://stackoverflow.com/questions/58044749/how-to-right-align-text-in-imgui-columns
-                            const auto& textSize = ImGui::CalcTextSize(infos->branch->name.c_str());
-                            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - textSize.x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
-                            const auto& win = ImGui::GetCurrentWindow();
-                            const auto& pos = win->DC.CursorPos;
-                            const auto& drawlist = win->DrawList;
-                            drawlist->AddRectFilled(
-                                pos - ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f), pos + textSize + ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f), bgCol, 5.0f);
-                            _branchEndPosX = pos.x + textSize.x + ImGui::GetStyle().ItemSpacing.x;
-                            const bool pushed =
-                                ImGui::PushStyleColorWithContrast4(bgCol, ImGuiCol_Text, ImGui::CustomStyle::puContrastedTextColor, ImGui::CustomStyle::puContrastRatio);
-                            ImGui::Text("%s", infos->branch->name.c_str());
-                            if (pushed)
-                                ImGui::PopStyleColor();
-                        }
-                        if (ImGui::TableNextColumn()) {  // graph
-                            m_drawGraphNode(_branchEndPosX, ptr, infos, textLineHeight);
-                        }
-                        if (ImGui::TableNextColumn()) {  // id
-                            ImGui::Text("%s", infos->idShort.c_str());
-                        }
-                        if (ImGui::TableNextColumn()) {  // Message
-                            ImGui::Selectable(infos->msgOneLine.c_str(), &selected, ImGuiSelectableFlags_SpanAllColumns);
-                        }
-                        if (ImGui::TableNextColumn()) {  // Author
-                            ImGui::Text("%s", infos->authorName.c_str());
-                        }
-                        if (ImGui::TableNextColumn()) {  // Date
-                            ImGui::Text("%s", infos->date.c_str());
-                        }
+                    if (ImGui::TableNextColumn()) {  // id
+                        ImGui::Text("%s", infos->idShort.c_str());
+                    }
+                    if (ImGui::TableNextColumn()) {  // Message
+                        ImGui::Selectable(infos->msgOneLine.c_str(), &selected, ImGuiSelectableFlags_SpanAllColumns);
+                    }
+                    if (ImGui::TableNextColumn()) {  // Author
+                        ImGui::Text("%s", infos->authorName.c_str());
+                    }
+                    if (ImGui::TableNextColumn()) {  // Date
+                        ImGui::Text("%s", infos->date.c_str());
                     }
                 }
             }
-            m_HistoryClipper.End();
-            ImGui::EndTable();
         }
+        m_HistoryClipper.End();
+        ImGui::EndTable();
     }
+    return true;
 }
 
 std::string GitGui::getXml(const std::string& vOffset, const std::string& vUserDatas) {

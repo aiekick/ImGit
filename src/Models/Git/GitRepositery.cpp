@@ -158,7 +158,7 @@ void GitRepositery::Internal_RetrieveHistory(bool vAllBranches, const std::strin
         // on parcours tous les commits
         git_oid oid;
         git_commit* commit = nullptr;
-        git_commit* parentCommit = nullptr;
+        //git_commit* parentCommit = nullptr;
         while (git_revwalk_next(&oid, s.walker) == 0) {
             git_commit_free(commit);
 
@@ -205,10 +205,9 @@ void GitRepositery::Internal_RetrieveHistory(bool vAllBranches, const std::strin
 
                         // date
                         static char out[200 + 1];
-                        struct tm intm;
                         time_t t = (time_t)sig->when.time + 60 * sig->when.offset;
-                        gmtime_s(&intm, &t);
-                        strftime(out, 200, "%Y/%m/%d %H:%M:%S", &intm);
+                        auto* intm = std::localtime(&t);
+                        strftime(out, 200, "%Y/%m/%d %H:%M:%S", intm);
                         gitCommit->date = std::string(out);
                     }
 
