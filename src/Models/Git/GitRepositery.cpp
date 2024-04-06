@@ -7,6 +7,7 @@
 #include <iostream>
 #include <ctools/FileHelper.h>
 #include <algorithm>
+#include <cstring>
 
 /*
 pour trouver le 1er commit :
