@@ -29,10 +29,13 @@ limitations under the License.
 #include <Panes/CodePane.h>
 #include <Panes/CommitGraph.h>
 #include <Panes/CommitPane.h>
+#include <Panes/ObjectsPane.h>
 
 #include <Systems/SettingsDialog.h>
 
 #include <Helpers/TranslationHelper.h>
+
+#include <Models/Gui/GitGui.h>
 
 // panes
 #define DEBUG_PANE_ICON ICON_SDFM_BUG
@@ -46,6 +49,9 @@ limitations under the License.
 #define CAMERA_ICON ICON_SDFMT_CAMCORDER
 #define GIZMO_ICON ICON_SDFMT_AXIS_ARROW
 
+// ribbon
+#define RIBBON_HEIGHT 100.0f
+
 using namespace std::placeholders;
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -57,7 +63,6 @@ bool MainFrontend::sCentralWindowHovered = false;
 //////////////////////////////////////////////////////////////////////////////////
 //// PUBLIC //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
-
 
 MainFrontend::~MainFrontend() = default;
 
@@ -72,10 +77,11 @@ bool MainFrontend::init() {
     LayoutManager::Instance()->SetPaneDisposalRatio("RIGHT", 0.25f);
     LayoutManager::Instance()->SetPaneDisposalRatio("BOTTOM", 0.25f);
 
-    LayoutManager::Instance()->AddPane(CodePane::Instance(), "Code Pane", "", "CENTRAL", 0.0f, false, false);
-    LayoutManager::Instance()->AddPane(CommitGraph::Instance(), "Commit Graph Pane", "", "CENTRAL", 0.0f, true, false);
-    LayoutManager::Instance()->AddPane(CommitPane::Instance(), "Commit Pane", "", "RIGHT", 0.3f, true, false);
-    LayoutManager::Instance()->AddPane(ConsolePane::Instance(), "Console Pane", "", "BOTTOM", 0.3f, false, false);
+    LayoutManager::Instance()->AddPane(ObjectsPane::Instance(), "Objects", "", "LEFT", 0.2f, true, false);
+    LayoutManager::Instance()->AddPane(CodePane::Instance(), "Code", "", "CENTRAL", 0.0f, false, false);
+    LayoutManager::Instance()->AddPane(CommitGraph::Instance(), "Commit Graph", "", "CENTRAL", 0.0f, true, false);
+    LayoutManager::Instance()->AddPane(CommitPane::Instance(), "Commit Infos", "", "RIGHT", 0.3f, true, false);
+    LayoutManager::Instance()->AddPane(ConsolePane::Instance(), "Console", "", "BOTTOM", 0.3f, false, false);
 
     // InitPänes is done in m_InitPanes, because a specific order is needed
 
@@ -109,7 +115,9 @@ void MainFrontend::Display(const uint32_t& vCurrentFrame, const ImVec2& vPos, co
         m_drawMainMenuBar();
         m_drawMainStatusBar();
 
-        if (LayoutManager::Instance()->BeginDockSpace(ImGuiDockNodeFlags_PassthruCentralNode)) {
+        GitGui::Instance()->drawRibbon(RIBBON_HEIGHT);
+
+        if (LayoutManager::Instance()->BeginDockSpace(ImGuiDockNodeFlags_PassthruCentralNode, ImVec2(0.0f, RIBBON_HEIGHT))) {
             /*if (MainBackend::Instance()->GetBackendDatasRef().canWeTuneGizmo) {
                 const auto viewport = ImGui::GetMainViewport();
                 ImGuizmo::SetDrawlist(ImGui::GetCurrentWindow()->DrawList);
@@ -141,10 +149,11 @@ bool MainFrontend::DrawOverlays(const uint32_t& vCurrentFrame, const ImRect& vRe
     return res;
 }
 
-bool MainFrontend::DrawDialogsAndPopups(
-    const uint32_t& vCurrentFrame, const ImVec2& vMaxSize, ImGuiContext* vContextPtr, void* vUserDatas) {
+bool MainFrontend::DrawDialogsAndPopups(const uint32_t& vCurrentFrame, const ImVec2& vMaxSize, ImGuiContext* vContextPtr, void* vUserDatas) {
     m_ActionSystem.RunActions();
     LayoutManager::Instance()->DrawDialogsAndPopups(vCurrentFrame, vMaxSize, vContextPtr, vUserDatas);
+    SettingsDialog::Instance()->Draw();
+    GitGui::Instance()->drawDialogs();
     if (m_ShowImGui) {
         ImGui::ShowDemoWindow(&m_ShowImGui);
     }
@@ -154,7 +163,6 @@ bool MainFrontend::DrawDialogsAndPopups(
     if (m_ShowMetric) {
         ImGui::ShowMetricsWindow(&m_ShowMetric);
     }
-    SettingsDialog::Instance()->Draw();
     return false;
 }
 
@@ -311,13 +319,13 @@ bool MainFrontend::ShowUnSavedDialog() {
                 ImGui::SetNextWindowPos(m_DisplayPos + m_DisplaySize * 0.5f, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
                 if (ImGui::BeginPopupModal(label, (bool*)0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking)) {
                     const auto& width = ImGui::CalcTextSize("Continue without saving").x + ImGui::GetStyle().ItemInnerSpacing.x;
-                    
+
                     if (ImGui::ContrastedButton("Save", nullptr, nullptr, width * 0.5f)) {
-                        res = Action_UnSavedDialog_SaveProject();
+                        res = m_Action_UnSavedDialog_SaveProject();
                     }
                     ImGui::SameLine();
                     if (ImGui::ContrastedButton("Save As", nullptr, nullptr, width * 0.5f)) {
-                        Action_UnSavedDialog_SaveAsProject();
+                        m_Action_UnSavedDialog_SaveAsProject();
                     }
 
                     if (ImGui::ContrastedButton("Continue without saving")) {
@@ -325,7 +333,7 @@ bool MainFrontend::ShowUnSavedDialog() {
                     }
 
                     if (ImGui::ContrastedButton("Cancel", nullptr, nullptr, width + ImGui::GetStyle().FramePadding.x)) {
-                        Action_Cancel();
+                        m_Action_Cancel();
                     }
 
                     ImGui::EndPopup();
@@ -353,7 +361,7 @@ void MainFrontend::Action_Menu_NewProject() {
         -	add action : open dialog for new project file name
     */
     m_ActionSystem.Clear();
-    Action_OpenUnSavedDialog_IfNeeded();
+    m_Action_OpenUnSavedDialog_IfNeeded();
     m_ActionSystem.Add([this]() {
         CloseUnSavedDialog();
         IGFD::FileDialogConfig config;
@@ -362,7 +370,7 @@ void MainFrontend::Action_Menu_NewProject() {
         ImGuiFileDialog::Instance()->OpenDialog("NewProjectDlg", "New Project File", PROJECT_EXT, config);
         return true;
     });
-    m_ActionSystem.Add([this]() { return Display_NewProjectDialog(); });
+    m_ActionSystem.Add([this]() { return m_Display_NewProjectDialog(); });
 }
 
 void MainFrontend::Action_Menu_OpenProject() {
@@ -375,7 +383,7 @@ void MainFrontend::Action_Menu_OpenProject() {
         -	add action : open project
     */
     m_ActionSystem.Clear();
-    Action_OpenUnSavedDialog_IfNeeded();
+    m_Action_OpenUnSavedDialog_IfNeeded();
     m_ActionSystem.Add([this]() {
         CloseUnSavedDialog();
         IGFD::FileDialogConfig config;
@@ -384,7 +392,7 @@ void MainFrontend::Action_Menu_OpenProject() {
         ImGuiFileDialog::Instance()->OpenDialog("OpenProjectDlg", "Open Project File", PROJECT_EXT, config);
         return true;
     });
-    m_ActionSystem.Add([this]() { return Display_OpenProjectDialog(); });
+    m_ActionSystem.Add([this]() { return m_Display_OpenProjectDialog(); });
 }
 
 void MainFrontend::Action_Menu_ReOpenProject() {
@@ -397,7 +405,7 @@ void MainFrontend::Action_Menu_ReOpenProject() {
         -	add action : re open project
     */
     m_ActionSystem.Clear();
-    Action_OpenUnSavedDialog_IfNeeded();
+    m_Action_OpenUnSavedDialog_IfNeeded();
     m_ActionSystem.Add([]() {
         MainBackend::Instance()->NeedToLoadProject(ProjectFile::Instance()->GetProjectFilepathName());
         return true;
@@ -423,7 +431,7 @@ void MainFrontend::Action_Menu_SaveProject() {
         }
         return true;
     });
-    m_ActionSystem.Add([this]() { return Display_SaveProjectDialog(); });
+    m_ActionSystem.Add([this]() { return m_Display_SaveProjectDialog(); });
 }
 
 void MainFrontend::Action_Menu_SaveAsProject() {
@@ -440,7 +448,7 @@ void MainFrontend::Action_Menu_SaveAsProject() {
         ImGuiFileDialog::Instance()->OpenDialog("SaveProjectDlg", "Save Project File", PROJECT_EXT, config);
         return true;
     });
-    m_ActionSystem.Add([this]() { return Display_SaveProjectDialog(); });
+    m_ActionSystem.Add([this]() { return m_Display_SaveProjectDialog(); });
 }
 
 void MainFrontend::Action_Menu_CloseProject() {
@@ -453,7 +461,7 @@ void MainFrontend::Action_Menu_CloseProject() {
         -	add action : Close project
     */
     m_ActionSystem.Clear();
-    Action_OpenUnSavedDialog_IfNeeded();
+    m_Action_OpenUnSavedDialog_IfNeeded();
     m_ActionSystem.Add([]() {
         MainBackend::Instance()->NeedToCloseProject();
         return true;
@@ -473,21 +481,21 @@ void MainFrontend::Action_Window_CloseApp() {
     */
 
     m_ActionSystem.Clear();
-    Action_OpenUnSavedDialog_IfNeeded();
+    m_Action_OpenUnSavedDialog_IfNeeded();
     m_ActionSystem.Add([]() {
         MainBackend::Instance()->CloseApp();
         return true;
     });
 }
 
-void MainFrontend::Action_OpenUnSavedDialog_IfNeeded() {
+void MainFrontend::m_Action_OpenUnSavedDialog_IfNeeded() {
     if (ProjectFile::Instance()->IsProjectLoaded() && ProjectFile::Instance()->IsThereAnyProjectChanges()) {
         OpenUnSavedDialog();
         m_ActionSystem.Add([this]() { return ShowUnSavedDialog(); });
     }
 }
 
-void MainFrontend::Action_Cancel() {
+void MainFrontend::m_Action_Cancel() {
     /*
     -	cancel :
         -	clear actions
@@ -497,10 +505,10 @@ void MainFrontend::Action_Cancel() {
     MainBackend::Instance()->NeedToCloseApp(false);
 }
 
-bool MainFrontend::Action_UnSavedDialog_SaveProject() {
+bool MainFrontend::m_Action_UnSavedDialog_SaveProject() {
     bool res = MainBackend::Instance()->SaveProject();
     if (!res) {
-        m_ActionSystem.Insert([this]() { return Display_SaveProjectDialog(); });
+        m_ActionSystem.Insert([this]() { return m_Display_SaveProjectDialog(); });
         m_ActionSystem.Insert([this]() {
             CloseUnSavedDialog();
             IGFD::FileDialogConfig config;
@@ -514,8 +522,8 @@ bool MainFrontend::Action_UnSavedDialog_SaveProject() {
     return res;
 }
 
-void MainFrontend::Action_UnSavedDialog_SaveAsProject() {
-    m_ActionSystem.Insert([this]() { return Display_SaveProjectDialog(); });
+void MainFrontend::m_Action_UnSavedDialog_SaveAsProject() {
+    m_ActionSystem.Insert([this]() { return m_Display_SaveProjectDialog(); });
     m_ActionSystem.Insert([this]() {
         CloseUnSavedDialog();
         IGFD::FileDialogConfig config;
@@ -527,15 +535,15 @@ void MainFrontend::Action_UnSavedDialog_SaveAsProject() {
     });
 }
 
-void MainFrontend::Action_UnSavedDialog_Cancel() {
-    Action_Cancel();
+void MainFrontend::m_Action_UnSavedDialog_Cancel() {
+    m_Action_Cancel();
 }
 
 ///////////////////////////////////////////////////////
 //// DIALOG FUNCS /////////////////////////////////////
 ///////////////////////////////////////////////////////
 
-bool MainFrontend::Display_NewProjectDialog() {
+bool MainFrontend::m_Display_NewProjectDialog() {
     // need to return false to continue to be displayed next frame
 
     ImVec2 min = m_DisplaySize * 0.5f;
@@ -546,9 +554,8 @@ bool MainFrontend::Display_NewProjectDialog() {
             CloseUnSavedDialog();
             auto file = ImGuiFileDialog::Instance()->GetFilePathName();
             MainBackend::Instance()->NeedToNewProject(file);
-        } else  // cancel
-        {
-            Action_Cancel();  // we interrupts all actions
+        } else {                // cancel
+            m_Action_Cancel();  // we interrupts all actions
         }
 
         ImGuiFileDialog::Instance()->Close();
@@ -559,7 +566,7 @@ bool MainFrontend::Display_NewProjectDialog() {
     return false;
 }
 
-bool MainFrontend::Display_OpenProjectDialog() {
+bool MainFrontend::m_Display_OpenProjectDialog() {
     // need to return false to continue to be displayed next frame
 
     ImVec2 min = m_DisplaySize * 0.5f;
@@ -569,9 +576,8 @@ bool MainFrontend::Display_OpenProjectDialog() {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             CloseUnSavedDialog();
             MainBackend::Instance()->NeedToLoadProject(ImGuiFileDialog::Instance()->GetFilePathName());
-        } else  // cancel
-        {
-            Action_Cancel();  // we interrupts all actions
+        } else {                // cancel
+            m_Action_Cancel();  // we interrupts all actions
         }
 
         ImGuiFileDialog::Instance()->Close();
@@ -582,7 +588,7 @@ bool MainFrontend::Display_OpenProjectDialog() {
     return false;
 }
 
-bool MainFrontend::Display_SaveProjectDialog() {
+bool MainFrontend::m_Display_SaveProjectDialog() {
     // need to return false to continue to be displayed next frame
 
     ImVec2 min = m_DisplaySize * 0.5f;
@@ -592,9 +598,8 @@ bool MainFrontend::Display_SaveProjectDialog() {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             CloseUnSavedDialog();
             MainBackend::Instance()->SaveAsProject(ImGuiFileDialog::Instance()->GetFilePathName());
-        } else  // cancel
-        {
-            Action_Cancel();  // we interrupts all actions
+        } else {                // cancel
+            m_Action_Cancel();  // we interrupts all actions
         }
 
         ImGuiFileDialog::Instance()->Close();
@@ -623,7 +628,7 @@ void MainFrontend::JustDropFiles(int count, const char** paths) {
     std::map<std::string, std::string> dicoFont;
     std::string prj;
 
-    for (int i = 0; i < count; ++i) {
+    /*for (int i = 0; i < count; ++i) {
         // file
         auto f = std::string(paths[i]);
 
@@ -642,7 +647,7 @@ void MainFrontend::JustDropFiles(int count, const char** paths) {
         if (f_opt.find(PROJECT_EXT) != std::string::npos) {
             prj = f;
         }
-    }
+    }*/
 
     // priority to project file
     if (!prj.empty()) {

@@ -65,5 +65,5 @@ if(NOT libgit2_POPULATED)
 	
 	set(LIB_GIT2_LIBRARIES libgit2package)
 	set(LIB_GIT2_INCLUDE_DIR ${libgit2_SOURCE_DIR}/include)
-	include_directories(${LIB_GIT2_INCLUDE_DIR}/libgit2)
+	include_directories(${LIB_GIT2_INCLUDE_DIR})
 endif()

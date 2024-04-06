@@ -35,9 +35,11 @@
 
 #include <Systems/SettingsDialog.h>
 
+#include <Models/Gui/GitGui.h>
+
 // we include the cpp just for embedded fonts
 #include <Res/fontIcons.cpp>
-#include <Res/Roboto_Medium.cpp> 
+#include <Res/Roboto_Medium.cpp>
 
 #define INITIAL_WIDTH 1700
 #define INITIAL_HEIGHT 700
@@ -75,12 +77,7 @@ bool MainBackend::init() {
 #else
     SetConsoleVisibility(false);
 #endif
-    if (m_InitWindow() && m_InitImGui()) {
-        m_InitPlugins();
-        m_InitModels();
-        m_InitSystems();
-        m_InitPanes();
-        m_InitSettings();
+    if (m_InitWindow() && m_InitImGui() && m_InitModels() && m_InitSystems() && m_InitPanes() && m_InitSettings()) {
         LoadConfigFile("config.xml", "app");
         return true;
     }
@@ -90,11 +87,11 @@ bool MainBackend::init() {
 // todo : to refactor ! i dont like that
 void MainBackend::unit() {
     SaveConfigFile("config.xml", "app");
+    m_UnitSettings();
+    m_UnitPanes();
     m_UnitSystems();
     m_UnitModels();
-    m_UnitImGui();     // before plugins since containing weak ptr to plugins
-    m_UnitSettings();  // after gui but before plugins since containing weak ptr to plugins
-    m_UnitPlugins();
+    m_UnitImGui();
     m_UnitWindow();
 }
 
@@ -180,13 +177,13 @@ void MainBackend::setAppTitle(const std::string& vFilePathName) {
 }
 
 ct::dvec2 MainBackend::GetMousePos() {
-        ct::dvec2 mp;
+    ct::dvec2 mp;
     glfwGetCursorPos(m_MainWindowPtr, &mp.x, &mp.y);
-        return mp;
+    return mp;
 }
 
 int MainBackend::GetMouseButton(int vButton) {
-        return glfwGetMouseButton(m_MainWindowPtr, vButton);
+    return glfwGetMouseButton(m_MainWindowPtr, vButton);
 }
 
 std::string MainBackend::getAppRelativeFilePathName(const std::string& vFilePathName) {
@@ -240,13 +237,12 @@ void MainBackend::m_RenderOffScreen() {
 
 void MainBackend::m_MainLoop() {
     int display_w, display_h;
-    ImVec2 pos, size;
     while (!glfwWindowShouldClose(m_MainWindowPtr)) {
         {
             ProjectFile::Instance()->NewFrame();
 
             // maintain active, prevent user change via imgui dialog
-            ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+            ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;    // Enable Docking
             ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;  // Disable Viewport
 
             glfwPollEvents();
@@ -259,13 +255,17 @@ void MainBackend::m_MainLoop() {
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
 
-            ImGuiViewport* viewport = ImGui::GetMainViewport();
-            if (viewport) {
-                pos = viewport->WorkPos;
-                size = viewport->WorkSize;
+            auto* viewport_ptr = ImGui::GetMainViewport();
+            if (viewport_ptr) {
+                m_DisplayPos = viewport_ptr->WorkPos;
+                m_DisplaySize = viewport_ptr->WorkSize;
+            } else {
+                m_DisplayPos = {};
+                m_DisplaySize.x = (float)display_w;
+                m_DisplaySize.y = (float)display_h;
             }
 
-            MainFrontend::Instance()->Display(m_CurrentFrame, pos, size);
+            MainFrontend::Instance()->Display(m_CurrentFrame, m_DisplayPos, m_DisplaySize);
 
             ImGui::Render();
 
@@ -285,8 +285,8 @@ void MainBackend::m_MainLoop() {
             }
             glfwMakeContextCurrent(backup_current_context);
 
-#ifdef USE_THUMBNAILS            
-			ImGuiFileDialog::Instance()->ManageGPUThumbnails();
+#ifdef USE_THUMBNAILS
+            ImGuiFileDialog::Instance()->ManageGPUThumbnails();
 #endif
 
             glfwSwapBuffers(m_MainWindowPtr);
@@ -303,7 +303,6 @@ void MainBackend::m_MainLoop() {
 }
 
 void MainBackend::m_Update() {
-
 }
 
 void MainBackend::m_IncFrame() {
@@ -345,7 +344,7 @@ bool MainBackend::setFromXml(tinyxml2::XMLElement* vElem, tinyxml2::XMLElement* 
 
     if (strName == "project") {
         NeedToLoadProject(strValue);
-    } 
+    }
 
     return true;
 }
@@ -426,12 +425,11 @@ bool MainBackend::m_InitImGui() {
                 assert(0);  // failed to load font
             }
         }
-    }    
+    }
 
     // Setup Platform/Renderer bindings
     if (ImGui_ImplGlfw_InitForOpenGL(m_MainWindowPtr, true) &&  //
         ImGui_ImplOpenGL3_Init(m_GlslVersion)) {
-
         // ui init
         if (MainFrontend::Instance()->init()) {
             return true;
@@ -440,37 +438,35 @@ bool MainBackend::m_InitImGui() {
     return false;
 }
 
-void MainBackend::m_InitPlugins() {
+bool MainBackend::m_InitModels() {
+    return GitGui::Instance()->init();
 }
 
-void MainBackend::m_InitModels() {
+bool MainBackend::m_InitPanes() {
+    if (LayoutManager::Instance()->InitPanes()) {
+        // a faire apres InitPanes() sinon ConsolePane::Instance()->paneFlag vaudra 0 et changeras apres InitPanes()
+        Messaging::Instance()->sMessagePaneId = ConsolePane::Instance()->GetFlag();
+        return true;
+    }
+    return false;
+}
+
+bool MainBackend::m_InitSettings() {
+    return SettingsDialog::Instance()->init();
+}
+
+bool MainBackend::m_InitSystems() {
+    return true;
 }
 
 void MainBackend::m_UnitModels() {
-}
-
-void MainBackend::m_UnitPlugins() {
-}
-
-void MainBackend::m_InitSystems() {
-    
+    GitGui::Instance()->unit();
 }
 
 void MainBackend::m_UnitSystems() {
 }
 
-void MainBackend::m_InitPanes() {
-    if (LayoutManager::Instance()->InitPanes()) {
-        // a faire apres InitPanes() sinon ConsolePane::Instance()->paneFlag vaudra 0 et changeras apres InitPanes()
-        Messaging::Instance()->sMessagePaneId = ConsolePane::Instance()->GetFlag();
-    }
-}
-
 void MainBackend::m_UnitPanes() {
-}
-
-void MainBackend::m_InitSettings() {
-    SettingsDialog::Instance()->init();
 }
 
 void MainBackend::m_UnitSettings() {
@@ -486,4 +482,3 @@ void MainBackend::m_UnitImGui() {
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
 }
-

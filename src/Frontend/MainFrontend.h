@@ -134,6 +134,7 @@ public:
 
     void OpenAboutDialog();
 
+public: // inlines
     FrameActionSystem* GetActionSystem() {
         return &m_ActionSystem;
     }
@@ -161,16 +162,16 @@ public:  // actions
 
 private:  // actions
     // via the unsaved dialog
-    bool Action_UnSavedDialog_SaveProject();
-    void Action_UnSavedDialog_SaveAsProject();
-    void Action_UnSavedDialog_Cancel();
+    bool m_Action_UnSavedDialog_SaveProject();
+    void m_Action_UnSavedDialog_SaveAsProject();
+    void m_Action_UnSavedDialog_Cancel();
     // others
-    void Action_OpenUnSavedDialog_IfNeeded();
-    void Action_Cancel();
+    void m_Action_OpenUnSavedDialog_IfNeeded();
+    void m_Action_Cancel();
     // dialog funcs to be in actions
-    bool Display_NewProjectDialog();
-    bool Display_OpenProjectDialog();
-    bool Display_SaveProjectDialog();
+    bool m_Display_NewProjectDialog();
+    bool m_Display_OpenProjectDialog();
+    bool m_Display_SaveProjectDialog();
 
 public:  // configuration
     std::string getXml(const std::string& vOffset, const std::string& vUserDatas = "") override;
