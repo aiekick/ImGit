@@ -71,11 +71,7 @@ void MainBackend::run() {
 
 // todo : to refactor ! i dont like that
 bool MainBackend::init() {
-#ifdef _DEBUG
-    SetConsoleVisibility(true);
-#else
     SetConsoleVisibility(false);
-#endif
     if (m_InitWindow() && m_InitImGui() && m_InitModels() && m_InitSystems() && m_InitPanes() && m_InitSettings()) {
         LoadConfigFile("config.xml", "app");
         return true;
@@ -195,6 +191,9 @@ void MainBackend::m_MainLoop() {
             ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;    // Enable Docking
             ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;  // Disable Viewport
 
+#ifndef _DEBUG
+            glfwWaitEventsTimeout(1.0);
+#endif
             glfwPollEvents();
 
             glfwGetFramebufferSize(m_MainWindowPtr, &display_w, &display_h);

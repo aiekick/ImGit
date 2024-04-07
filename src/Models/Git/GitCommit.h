@@ -28,7 +28,7 @@ public:
     GitDate dateEpoch = 0;                    // date in format epoh
     std::string msg;                          // message
     std::string msgOneLine;                   // message in one line (only the first line, unitl '\n')
-    GitBranchWeak branch;                      // branch of the commit
+    GitBranchWeak branch;                     // branch of the commit
     intptr_t branchPtrId = 0;                 // branch ptr conversion ot intptr for avoid calculation in loops
     std::set<std::string> branchs;            // branchs appartenance
     std::set<std::string> parentIds;          // parent short ids (mini => 1, maxi => no limit, but in usual cases, its 2)
@@ -38,8 +38,9 @@ public:
     std::vector<GitGraphNodeEnum> nodeTypes;  // type de node de graph
     bool isRoot = false;                      // first commit
     bool isNewbranch = false;                 // just new branch is created
+    bool isMerging = false;                   // the commit is merging
     bool isLastCommit = false;                // last commit fo current branch
-    bool isTag = false; // is a tag
+    bool isTag = false;                       // is a tag
 
 public:
     GitCommit();

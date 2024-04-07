@@ -271,8 +271,9 @@ bool GitGui::drawHistory() {
                         const bool pushed =
                             ImGui::PushStyleColorWithContrast4(bgCol, ImGuiCol_Text, ImGui::CustomStyle::puContrastedTextColor, ImGui::CustomStyle::puContrastRatio);
                         ImGui::Text("%s", branch_ptr->name.c_str());
-                        if (pushed)
+                        if (pushed) {
                             ImGui::PopStyleColor();
+                        }
                     }
                     if (ImGui::TableNextColumn()) {  // graph
                         m_drawGraphNode(_branchEndPosX, ptr, infos, textLineHeight);

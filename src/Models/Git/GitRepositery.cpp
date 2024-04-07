@@ -201,9 +201,20 @@ void GitRepositery::m_RetrieveHistory(const std::string& vBanchType, const std::
                 uint32_t count_parent = git_commit_parentcount(commit);
                 if (count_parent > 1U) {
                     gitCommit->msg = "Merge :";
+                    gitCommit->parentIds.clear();
+                    gitCommit->isMerging = true;
                     for (uint32_t i = 0U; i < count_parent; ++i) {
-                        git_oid_tostr(buf, 8, git_commit_parent_id(commit, i));
-                        gitCommit->msg += " " + std::string(buf);
+                        auto oid = git_commit_parent_id(commit, i);
+                        {  // append short id to merge message
+                            git_oid_tostr(buf, 8, oid);
+                            auto parent_short_id = std::string(buf);
+                            gitCommit->msg += " " + parent_short_id;
+                        }
+                        {  // add long id to parent ids container
+                            git_oid_tostr(buf, sizeof(buf), oid);
+                            auto parent_long_id = std::string(buf);
+                            gitCommit->parentIds.emplace(parent_long_id);
+                        }
                     }
                     gitCommit->msg += "\n";
                 }
@@ -261,6 +272,15 @@ void GitRepositery::m_RetrieveHistory(const std::string& vBanchType, const std::
     git_revwalk_free(s.walker);
 }
 
+/// <summary>
+/// this function will explor the parent until be on the level 0
+/// </summary>
+/// <param name="vCommitPtr"></param>
+/// <param name="vLevel"></param>
+void recurs_explore_merging(GitCommit *vCommitPtr, const int32_t& vLevel) {
+
+}
+
 void GitRepositery::m_FinalizeRetrieveHistory(const std::string& vBranchName) {
     m_History.clear();
 
@@ -285,14 +305,50 @@ void GitRepositery::m_FinalizeRetrieveHistory(const std::string& vBranchName) {
         return (a->dateEpoch > b->dateEpoch);
     });
 
-    size_t maxGraphColumn = 0U;
-
+    // here we must compute the infos for display the graph as good with branchs, merges, etc...
+    // we must set :
+    // isNewbranch
+    // graphColumn
+    // maxGraphColumn
+    GitBranch* last_branch_ptr = nullptr;
+    GitBranch* curr_branch_ptr = nullptr;
+    GitCommit* last_commit_ptr = nullptr;
     for (auto it = m_History.rbegin(); it != m_History.rend(); ++it) {
-        if ((*it)->graphColumn > maxGraphColumn) {
-            (*it)->isNewbranch = true;
+        auto commit_ptr = (*it);
+        if (commit_ptr != nullptr) {
+            curr_branch_ptr = nullptr;
+            if (!commit_ptr->branch.expired()) {
+                curr_branch_ptr = commit_ptr->branch.lock().get();
+            }
+            if (curr_branch_ptr != last_branch_ptr) {
+                //commit_ptr->isNewbranch = true;
+                //commit_ptr->graphColumn = maxGraphColumn;
+                //++maxGraphColumn;
+                //commit_ptr->maxGraphColumn = maxGraphColumn;
+            }
+            if (last_commit_ptr != nullptr) {
+                for (const auto& id : commit_ptr->parentIds) {
+                    if (id == last_commit_ptr->id) {
+                        if (commit_ptr->isMerging) {
+                            if (last_commit_ptr->graphColumn > 0) {
+                                commit_ptr->graphColumn = last_commit_ptr->graphColumn - 1;
+                            }
+                        } else {
+                            commit_ptr->graphColumn = last_commit_ptr->graphColumn;
+                        }
+                    } else {
+                        recurs_explore_merging(last_commit_ptr, last_commit_ptr->graphColumn + 1);
+                        last_commit_ptr->isNewbranch = true;
+                        last_commit_ptr->graphColumn += 1;
+                        last_commit_ptr->maxGraphColumn = ct::maxi(last_commit_ptr->graphColumn, last_commit_ptr->maxGraphColumn);
+                    }
+                }
+                commit_ptr->maxGraphColumn = ct::maxi(commit_ptr->graphColumn, commit_ptr->maxGraphColumn);
+            }
+
+            last_branch_ptr = curr_branch_ptr;
+            last_commit_ptr = commit_ptr.get();
         }
-        maxGraphColumn = ct::maxi(maxGraphColumn, (*it)->graphColumn);
-        (*it)->maxGraphColumn = maxGraphColumn;
     }
 
     m_CurrentHistoryBranch = vBranchName;
@@ -319,7 +375,6 @@ static inline ct::fvec4 GetRainBow(float r) {
 void GitRepositery::m_RetrieveBranchs() {
     m_Branchs.clear();
     m_BranchColors.clear();
-    size_t graphColumnCount = 0U;
 
     git_branch_iterator* it;
     if (!git_branch_iterator_new(&it, m_Repo, GIT_BRANCH_ALL)) {
@@ -330,7 +385,6 @@ void GitRepositery::m_RetrieveBranchs() {
             if (git_branch_name(&name, ref) == 0) {
                 auto ptr = std::make_shared<GitBranch>();
                 ptr->name = name;
-                ptr->graphColumn = ++graphColumnCount;
                 if (type == git_branch_t::GIT_BRANCH_LOCAL) {
                     ptr->target = GIT_LOCAL_TARGET;
                     if (git_branch_is_head(ref) == 1) {
@@ -339,7 +393,7 @@ void GitRepositery::m_RetrieveBranchs() {
                     m_Branchs[ptr->target][ptr->name] = ptr;
                 }else {
                     auto arr = ct::splitStringToVector(ptr->name, "/");
-                    if (arr.size() == 2ui64) {
+                    if (arr.size() == (size_t)2) {
                         ptr->target = arr.at(0);
                         ptr->name = arr.at(1);
                         if (ptr->name != "HEAD") {
