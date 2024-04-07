@@ -5,6 +5,8 @@
 
 #include <cinttypes>  // printf zu
 
+#include <Models/Gui/GitGui.h>
+
 ObjectsPane::ObjectsPane() = default;
 ObjectsPane::~ObjectsPane() {
     Unit();
@@ -35,6 +37,8 @@ bool ObjectsPane::DrawPanes(const uint32_t& /*vCurrentFrame*/, bool* vOpened, Im
                 flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus /* | ImGuiWindowFlags_MenuBar*/;
 #endif
         }
+
+        GitGui::Instance()->drawObjects();
 
         ImGui::End();
     }

@@ -1,8 +1,7 @@
 #pragma once
 
 #include <ImGuiPack/ImGuiPack.h>
-#include <Models/Git/GitRepositery.h>
-#include <Models/Git/GitCommit.h>
+#include <Headers/globals.h>
 #include <set>
 #include <string>
 #include <ctools/ConfigAbstract.h>
@@ -29,7 +28,7 @@ public:
 
     bool drawRibbon(const float& vHeight);
     bool drawDialogs();
-
+    bool drawObjects();
     bool drawHistory();
 
     virtual std::string getXml(const std::string& vOffset, const std::string& vUserDatas) override;
@@ -37,7 +36,7 @@ public:
     virtual bool setFromXml(tinyxml2::XMLElement* vElem, tinyxml2::XMLElement* vParent, const std::string& vUserDatas) override;
 
 private:
-    bool m_drawGraphNode(const float& vLastPosX, std::shared_ptr<GitRepositery> vRepositery, std::shared_ptr<GitCommit> vCommit, const float& vTextLineHeight);
+    bool m_drawGraphNode(const float& vLastPosX, GitRepositeryPtr vRepositery, GitCommitPtr vCommit, const float& vTextLineHeight);
 
 public:  // singleton
     static GitGui* Instance() {

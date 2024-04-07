@@ -3,11 +3,14 @@
 #include <Models/Git/GitBranch.h>
 #include <Models/Git/GitCommit.h>
 
-#include <git2.h>
 #include <iostream>
 #include <ctools/FileHelper.h>
 #include <algorithm>
 #include <cstring>
+
+#include <ctools/Logger.h>
+
+#include <git2/refs.h>
 
 /*
 pour trouver le 1er commit :
@@ -16,20 +19,19 @@ pour trouver le 1er commit :
  - il n'a pas de parents
 */
 
-std::shared_ptr<GitRepositery> GitRepositery::create(const std::string& vRepoPathName) {
+GitRepositeryPtr GitRepositery::create(const std::string& vRepoPathName) {
     auto res = std::make_shared<GitRepositery>();
     if (!res->Init(vRepoPathName)) {
         res.reset();
     } else {
-        res->RetrieveBranchs();
-        res->ScanRemoteFullHistory();
+        res->m_RetrieveBranchs();
+        res->m_RetrieveTags();
+        res->m_ScanFullHistory();
     }
-
     return res;
 }
 
-GitRepositery::GitRepositery() {
-}
+GitRepositery::GitRepositery() = default;
 
 GitRepositery::~GitRepositery() {
     Unit();
@@ -47,12 +49,11 @@ bool GitRepositery::Init(const std::string& vRepoPathName) {
             }
             return true;
         } else if (err < 0) {
-            std::cout << "Repositery found but cant be opened" << std::endl;
+            LogVarError("Repositery found but cant be opened");
             return false;
         }
     }
-
-    std::cout << "Repositery not found" << std::endl;
+    LogVarError("Repositery not found");
     return false;
 }
 
@@ -60,209 +61,207 @@ void GitRepositery::Unit() {
     git_repository_free(m_Repo);
 }
 
-std::shared_ptr<GitBranch> GitRepositery::GetBranch(const std::string& vBranchName) {
-    if (m_HeadBranch->name == vBranchName)
-        return m_HeadBranch;
-
-    if (m_Branchs.find(vBranchName) != m_Branchs.end()) {
-        return m_Branchs[vBranchName];
+GitBranchWeak GitRepositery::GetBranch(const std::string& vBranchName) {
+    for (const auto& type : m_Branchs) {
+        if (type.second.find(vBranchName) != type.second.end()) {
+            return type.second.at(vBranchName);
+        }
     }
-    return nullptr;
+    return {};
 }
 
 ct::fvec4 GitRepositery::GetBranchColorFromIndex(size_t vIndex) {
-    if (vIndex < m_BranchColors.size())
+    if (vIndex < m_BranchColors.size()) {
         return m_BranchColors[vIndex];
-    CTOOL_DEBUG_BREAK;
-    return 0.0f;
+    }
+    return {};
 }
 
-void GitRepositery::Select_All_Branch() {
-    Intenal_Finalize_RetrieveHistory("");
+void GitRepositery::SelectAllBranch() {
+    m_FinalizeRetrieveHistory("");
 }
-void GitRepositery::Select_One_Branch(const std::string& vBranchName) {
-    Intenal_Finalize_RetrieveHistory(vBranchName);
+void GitRepositery::SelectOneBranch(const std::string& vBranchName) {
+    m_FinalizeRetrieveHistory(vBranchName);
 }
 
-void GitRepositery::ScanRemoteFullHistory() {
+void GitRepositery::m_ScanFullHistory() {
     // methode actuelle mais ne permet pas de savoir quelle commit ava avec quelle branche
     // Internal_RetrieveHistory(true, "");
 
-    Internal_Clear_Databases();
-    Internal_RetrieveHistory(false, m_HeadBranch->name, false);
-    for (const auto& branchName : m_Branchs) {
-        Internal_RetrieveHistory(false, branchName.second->name, false);
+    m_ClearDatabases();
+    for (const auto& type : m_Branchs) {
+        for (const auto& branch : type.second) {
+            m_RetrieveHistory(type.first, branch.first, false);
+        }
     }
-    Intenal_Finalize_RetrieveHistory("");
+    for (const auto& tag : m_Tags) {
+        m_RetrieveHistory(GIT_TAG_TARGET, tag.first, false);
+    }
+    m_FinalizeRetrieveHistory("");
 }
 
-void GitRepositery::Internal_Clear_Databases() {
+void GitRepositery::m_ClearDatabases() {
     m_CommitsDatabase.clear();
 }
 
-void GitRepositery::Internal_RetrieveHistory(bool vAllBranches, const std::string& vBranchName, const bool& vResetCollections) {
+void GitRepositery::m_RetrieveHistory(const std::string& vBanchType, const std::string& vBranchName, const bool& vResetCollections) {
     if (vResetCollections) {
-        Internal_Clear_Databases();
+        m_ClearDatabases();
     }
-
-    if (m_HeadBranch.use_count()) {
-        struct log_state {
-            git_repository* repo = nullptr;
-            const char* repodir = nullptr;
-            git_revwalk* walker = nullptr;
-            int hide = 0;
-            int sorting = GIT_SORT_TIME | GIT_SORT_REVERSE;
-            int revisions = 0;
-        } s;
-
-        s.repo = m_Repo;
-
-        if (!s.walker) {
-            if (git_revwalk_new(&s.walker, s.repo) != 0) {
-                printf("Could not create revision walker\n");
-            } else {
-                git_revwalk_sorting(s.walker, s.sorting);
-
-                if (vAllBranches) {
-                    if (git_revwalk_push_glob(s.walker, "refs/remotes/*") != 0) {
-                        printf("Could not find repository for branch %s\n", vBranchName.c_str());
-                    }
-                    m_CurrentHistoryBranch.clear();
-                } else if (vBranchName.empty()) {
-                    auto str = "refs/remotes/" + m_HeadBranch->name;
-                    if (git_revwalk_push_ref(s.walker, str.c_str()) != 0) {
-                        printf("Could not find repository for branch %s\n", m_HeadBranch->name.c_str());
-                    }
-                    m_CurrentHistoryBranch = m_HeadBranch->name;
-                } else {
-                    auto str = "refs/remotes/" + vBranchName;
-                    if (git_revwalk_push_ref(s.walker, str.c_str()) != 0) {
-                        printf("Could not find repository for branch %s\n", vBranchName.c_str());
-                    }
-                    m_CurrentHistoryBranch = vBranchName;
-                }
-            }
-        }
-
-        if (m_CurrentHistoryBranch.empty())
-            return;
-
-        // reset stats
-        if (m_CurrentHistoryBranch == m_HeadBranch->name) {
-            m_HeadBranch->nCommits = 0U;
-            m_HeadBranch->nUnCommits = 0U;
+    struct log_state {
+        git_repository* repo = nullptr;
+        const char* repodir = nullptr;
+        git_revwalk* walker = nullptr;
+        int hide = 0;
+        int sorting = GIT_SORT_TIME | GIT_SORT_REVERSE;
+        int revisions = 0;
+    } s;
+    s.repo = m_Repo;
+    GitBranchPtr currentBranch = nullptr;
+    if (!s.walker) {
+        if (git_revwalk_new(&s.walker, s.repo) != 0) {
+            LogVarError("Could not create revision walker");
         } else {
-            m_Branchs[m_CurrentHistoryBranch]->nCommits = 0U;
-            m_Branchs[m_CurrentHistoryBranch]->nUnCommits = 0U;
-        }
-
-        // on parcours tous les commits
-        git_oid oid;
-        git_commit* commit = nullptr;
-        //git_commit* parentCommit = nullptr;
-        while (git_revwalk_next(&oid, s.walker) == 0) {
-            git_commit_free(commit);
-
-            // on parcours les commit
-            if (git_commit_lookup(&commit, s.repo, &oid) == 0) {
-                char buf[GIT_OID_HEXSZ + 1];
-
-                git_oid_tostr(buf, sizeof(buf), git_commit_id(commit));
-                std::string commitId = buf;
-
-                if (m_CurrentHistoryBranch == m_HeadBranch->name)
-                    m_HeadBranch->nCommits++;
-                else
-                    m_Branchs[m_CurrentHistoryBranch]->nCommits++;
-
-                std::shared_ptr<GitCommit> gitCommit = nullptr;
-
-                if (m_CommitsDatabase.find(commitId) == m_CommitsDatabase.end()) {
-                    gitCommit = std::make_shared<GitCommit>();
-
-                    gitCommit->id = commitId;
-                    gitCommit->idShort = std::string(buf, ct::mini(strlen(buf), (size_t)7U));
-
-                    auto orgGitRepo = git_commit_owner(commit);
-                    if (orgGitRepo != m_Repo) {
-                        printf("Repo not the same\n");
-                    }
-
-                    uint32_t count_parent = git_commit_parentcount(commit);
-                    if (count_parent > 1U) {
-                        gitCommit->msg = "Merge :";
-                        for (uint32_t i = 0U; i < count_parent; ++i) {
-                            git_oid_tostr(buf, 8, git_commit_parent_id(commit, i));
-                            gitCommit->msg += " " + std::string(buf);
-                        }
-                        gitCommit->msg += "\n";
-                    }
-
-                    const git_signature* sig = git_commit_author(commit);
-                    if (sig) {
-                        gitCommit->authorName = sig->name;
-                        gitCommit->authorMail = sig->email;
-                        gitCommit->dateEpoch = sig->when.time;
-
-                        // date
-                        static char out[200 + 1];
-                        time_t t = (time_t)sig->when.time + 60 * sig->when.offset;
-                        auto* intm = std::localtime(&t);
-                        strftime(out, 200, "%Y/%m/%d %H:%M:%S", intm);
-                        gitCommit->date = std::string(out);
-                    }
-
-                    gitCommit->msg += git_commit_message(commit);
-                    gitCommit->msgSize = gitCommit->msg.size();
-
-                    gitCommit->branch = GetBranch(m_CurrentHistoryBranch);
-                    assert(gitCommit->branch.use_count());
-                    gitCommit->graphColumn = gitCommit->branch->graphColumn;
-
-                    if (m_CurrentHistoryBranch == m_HeadBranch->name)
-                        m_HeadBranch->nUnCommits++;
-                    else
-                        m_Branchs[m_CurrentHistoryBranch]->nUnCommits++;
-
-                    // conversion in one line only
-                    gitCommit->msgOneLine = gitCommit->msg;
-                    auto el = gitCommit->msgOneLine.find('\n');
-                    if (el != std::string::npos) {
-                        gitCommit->msgOneLine = gitCommit->msgOneLine.substr(0, el);
-                    }
-
-                    if (m_CommitsDatabase.empty())
-                        gitCommit->isRoot = true;  // first commit
-
-                    gitCommit->branchPtrId = (intptr_t)(gitCommit->branch.get());
-
-                    m_CommitsDatabase[gitCommit->id] = gitCommit;
-                    m_LastCommitPerBranch[gitCommit->branchPtrId] = gitCommit;
-                } else {
-                    gitCommit = m_CommitsDatabase[commitId];
+            git_revwalk_sorting(s.walker, s.sorting);
+            if (vBanchType == GIT_LOCAL_TARGET) {
+                auto str = "refs/heads/" + vBranchName;
+                if (git_revwalk_push_ref(s.walker, str.c_str()) != 0) {
+                    LogVarError("Could not find repository for branch %s\n", vBranchName.c_str());
+                    git_revwalk_free(s.walker);
+                    return;
                 }
-
-                /*if (gitCommit.use_count())
-                {
-                    gitCommit->branchs.emplace(m_CurrentHistoryBranch);
-
-                    if (gitCommit->branchs.size() == 1U)
-                    {
-                        gitCommit->branch = *gitCommit->branchs.begin();
-                    }
-                }*/
+                m_CurrentHistoryBranch = vBranchName;
+            } else if (vBanchType == GIT_TAG_TARGET) {
+                auto str = "refs/tags/" + vBranchName;
+                if (git_revwalk_push_ref(s.walker, str.c_str()) != 0) {
+                    LogVarError("Could not find repository for branch %s\n", vBranchName.c_str());
+                    git_revwalk_free(s.walker);
+                    return;
+                }
+                m_CurrentHistoryBranch = vBranchName;
+            } else {
+                auto str = "refs/remotes/" + vBanchType + "/" + vBranchName;
+                if (git_revwalk_push_ref(s.walker, str.c_str()) != 0) {
+                    LogVarError("Could not find repository for branch %s\n", vBranchName.c_str());
+                    git_revwalk_free(s.walker);
+                    return;
+                }
+                m_CurrentHistoryBranch = vBranchName;
             }
         }
-
-        for (auto co : m_LastCommitPerBranch) {
-            co.second->isLastCommit = true;
-        }
-
-        git_revwalk_free(s.walker);
     }
+
+    if (m_CurrentHistoryBranch.empty()) {
+        return;
+    }
+
+    if (m_Branchs.find(vBanchType) == m_Branchs.end()) { // not found
+        currentBranch = std::make_shared<GitBranch>();
+        m_Branchs[vBanchType][vBranchName] = currentBranch;
+    } else if (m_Branchs.at(vBanchType).find(vBranchName) == m_Branchs.at(vBanchType).end()) {  // not found
+        currentBranch = std::make_shared<GitBranch>();
+        m_Branchs[vBanchType][vBranchName] = currentBranch;
+    } else {
+        currentBranch = m_Branchs.at(vBanchType).at(vBranchName);
+    }
+
+    // reset stats
+    currentBranch->nCommits = 0U;
+    currentBranch->nUnCommits = 0U;
+
+    // on parcours tous les commits
+    git_oid oid;
+    git_commit* commit = nullptr;
+    // git_commit* parentCommit = nullptr;
+    while (git_revwalk_next(&oid, s.walker) == 0) {
+        git_commit_free(commit);
+
+        // on parcours les commit
+        if (git_commit_lookup(&commit, s.repo, &oid) == 0) {
+            char buf[GIT_OID_HEXSZ + 1];
+
+            git_oid_tostr(buf, sizeof(buf), git_commit_id(commit));
+            std::string commitId = buf;
+
+            currentBranch->nCommits++;
+
+            GitCommitPtr gitCommit = nullptr;
+
+            if (m_CommitsDatabase.find(commitId) == m_CommitsDatabase.end()) {
+                gitCommit = std::make_shared<GitCommit>();
+
+                gitCommit->id = commitId;
+                gitCommit->idShort = std::string(buf, ct::mini(strlen(buf), (size_t)7U));
+
+                auto orgGitRepo = git_commit_owner(commit);
+                if (orgGitRepo != m_Repo) {
+                    LogVarError("Repo not the same\n");
+                }
+
+                uint32_t count_parent = git_commit_parentcount(commit);
+                if (count_parent > 1U) {
+                    gitCommit->msg = "Merge :";
+                    for (uint32_t i = 0U; i < count_parent; ++i) {
+                        git_oid_tostr(buf, 8, git_commit_parent_id(commit, i));
+                        gitCommit->msg += " " + std::string(buf);
+                    }
+                    gitCommit->msg += "\n";
+                }
+
+                const git_signature* sig = git_commit_author(commit);
+                if (sig) {
+                    gitCommit->authorName = sig->name;
+                    gitCommit->authorMail = sig->email;
+                    gitCommit->dateEpoch = sig->when.time;
+
+                    // date
+                    static char out[200 + 1];
+                    time_t t = (time_t)sig->when.time + 60 * sig->when.offset;
+                    auto* intm = std::localtime(&t);
+                    strftime(out, 200, "%Y/%m/%d %H:%M:%S", intm);
+                    gitCommit->date = std::string(out);
+                }
+
+                gitCommit->msg += git_commit_message(commit);
+                gitCommit->msgSize = gitCommit->msg.size();
+
+                gitCommit->branch = GetBranch(m_CurrentHistoryBranch);
+                auto branch_ptr = gitCommit->branch.lock();
+                assert(branch_ptr != nullptr);
+                gitCommit->graphColumn = branch_ptr->graphColumn;
+
+                currentBranch->nUnCommits++;
+
+                // conversion in one line only
+                gitCommit->msgOneLine = gitCommit->msg;
+                auto el = gitCommit->msgOneLine.find('\n');
+                if (el != std::string::npos) {
+                    gitCommit->msgOneLine = gitCommit->msgOneLine.substr(0, el);
+                }
+
+                if (m_CommitsDatabase.empty()) {
+                    gitCommit->isRoot = true;  // first commit
+                }
+                
+                if (vBanchType == GIT_TAG_TARGET) {
+                    gitCommit->isTag = true;
+                    m_Tags[vBranchName] = gitCommit;
+                }
+
+                gitCommit->branchPtrId = (intptr_t)(branch_ptr.get());
+
+                m_CommitsDatabase[gitCommit->id] = gitCommit;
+                currentBranch->lastCommit = gitCommit;
+            } else {
+                gitCommit = m_CommitsDatabase[commitId];
+            }
+        }
+    }
+
+    git_revwalk_free(s.walker);
 }
 
-void GitRepositery::Intenal_Finalize_RetrieveHistory(const std::string& vBranchName) {
+void GitRepositery::m_FinalizeRetrieveHistory(const std::string& vBranchName) {
     m_History.clear();
 
     if (vBranchName.empty()) {
@@ -271,13 +270,16 @@ void GitRepositery::Intenal_Finalize_RetrieveHistory(const std::string& vBranchN
         }
     } else {
         for (const auto& c : m_CommitsDatabase) {
-            if (c.second->branch->name == vBranchName) {
-                m_History.push_back(c.second);
+            auto branch_ptr = c.second->branch.lock();
+            if (branch_ptr != nullptr) {
+                if (branch_ptr->name == vBranchName) {
+                    m_History.push_back(c.second);
+                }
             }
         }
     }
 
-    std::sort(m_History.begin(), m_History.end(), [](const std::shared_ptr<GitCommit>& a, const std::shared_ptr<GitCommit>& b) -> bool {
+    std::sort(m_History.begin(), m_History.end(), [](const GitCommitPtr& a, const GitCommitPtr& b) -> bool {
         if (a->dateEpoch == b->dateEpoch)
             return (a->id > b->id);
         return (a->dateEpoch > b->dateEpoch);
@@ -294,34 +296,16 @@ void GitRepositery::Intenal_Finalize_RetrieveHistory(const std::string& vBranchN
     }
 
     m_CurrentHistoryBranch = vBranchName;
-}
 
-void GitRepositery::Internal_GetRemoteDefaultBranchName() {
-    m_HeadBranch = std::make_shared<GitBranch>();
-    if (m_HeadBranch.use_count()) {
-        git_branch_iterator* it;
-        if (!git_branch_iterator_new(&it, m_Repo, GIT_BRANCH_REMOTE)) {
-            git_reference* ref;
-            git_branch_t type;
-            while (git_branch_next(&ref, &type, it) == 0) {
-                const char* name;
-                if (git_branch_name(&name, ref) == 0) {
-                    const std::string& nameStr = name;
-                    if (nameStr.find("/HEAD") != std::string::npos) {
-                        m_HeadBranch->name = git_reference_symbolic_target(ref);
-                        ct::replaceString(m_HeadBranch->name, "refs/remotes/", "");
-                        git_reference_free(ref);
-                        break;
-                    } else if (nameStr.find("master") != std::string::npos) {
-                        m_HeadBranch->name = nameStr;
-                        ct::replaceString(m_HeadBranch->name, "refs/remotes/", "");
-                        git_reference_free(ref);
-                        break;
-                    }
+    // set last commit from branchs as last commit
+    for (const auto& type : m_Branchs) {
+        for (const auto& branch : type.second) {
+            if (branch.second != nullptr) {
+                auto last_commit_ptr = branch.second->lastCommit.lock();
+                if (last_commit_ptr != nullptr) {
+                    last_commit_ptr->isLastCommit = true;
                 }
-                git_reference_free(ref);
             }
-            git_branch_iterator_free(it);
         }
     }
 }
@@ -332,43 +316,73 @@ static inline ct::fvec4 GetRainBow(float r) {
     return ct::cos(c + r * 6.3f) * 0.5f + 0.5f;
 }
 
-void GitRepositery::RetrieveBranchs() {
+void GitRepositery::m_RetrieveBranchs() {
     m_Branchs.clear();
     m_BranchColors.clear();
-    Internal_GetRemoteDefaultBranchName();
+    size_t graphColumnCount = 0U;
 
-    if (m_HeadBranch.use_count()) {
-        size_t graphColumnCount = 0U;
-
-        git_branch_iterator* it;
-        if (!git_branch_iterator_new(&it, m_Repo, GIT_BRANCH_REMOTE)) {
-            git_reference* ref;
-            git_branch_t type;
-            while (!git_branch_next(&ref, &type, it)) {
-                const char* name;
-                if (git_branch_name(&name, ref) == 0) {
-                    const std::string& nameStr = name;
-                    if (nameStr.find("/HEAD") == std::string::npos) {
-                        if (m_HeadBranch->name != nameStr) {
-                            auto res = std::make_shared<GitBranch>();
-                            res->name = nameStr;
-                            res->graphColumn = ++graphColumnCount;
-                            m_Branchs[nameStr] = res;
+    git_branch_iterator* it;
+    if (!git_branch_iterator_new(&it, m_Repo, GIT_BRANCH_ALL)) {
+        git_reference* ref;
+        git_branch_t type;
+        while (!git_branch_next(&ref, &type, it)) {
+            const char* name;
+            if (git_branch_name(&name, ref) == 0) {
+                auto ptr = std::make_shared<GitBranch>();
+                ptr->name = name;
+                ptr->graphColumn = ++graphColumnCount;
+                if (type == git_branch_t::GIT_BRANCH_LOCAL) {
+                    ptr->target = GIT_LOCAL_TARGET;
+                    if (git_branch_is_head(ref) == 1) {
+                        m_HeadBranch = ptr;
+                    }
+                    m_Branchs[ptr->target][ptr->name] = ptr;
+                }else {
+                    auto arr = ct::splitStringToVector(ptr->name, "/");
+                    if (arr.size() == 2ui64) {
+                        ptr->target = arr.at(0);
+                        ptr->name = arr.at(1);
+                        if (ptr->name != "HEAD") {
+                            m_Branchs[ptr->target][ptr->name] = ptr;
                         }
+                    } else {
+                        LogVarError("Target have more than two names : %s", ptr->name.c_str());
                     }
                 }
-                git_reference_free(ref);
             }
-            git_branch_iterator_free(it);
+            git_reference_free(ref);
         }
+        git_branch_iterator_free(it);
+    }
 
-        float count = (float)(m_Branchs.size() + 1);
-        float idx = 1.0f;
-        m_HeadBranch->color = GetRainBow(idx++ / count);
-        m_BranchColors.push_back(m_HeadBranch->color);
-        for (auto& b : m_Branchs) {
-            b.second->color = GetRainBow(idx++ / count);
-            m_BranchColors.push_back(b.second->color);
+    float idx = 1.0f;
+    float count = (float)(m_Branchs.size() + 1);
+    for (auto& type : m_Branchs) {
+        for (auto& branch : type.second) {
+            branch.second->color = GetRainBow(idx++ / count);
+            m_BranchColors.push_back(branch.second->color);
         }
+    }
+}
+
+void GitRepositery::m_RetrieveTags() {
+    git_reference_iterator* it;
+    git_oid oid;
+    char oid_str[GIT_OID_HEXSZ + 1];
+    if (git_reference_iterator_new(&it, m_Repo) == 0) {
+        const char* refname;
+        while (!git_reference_next_name(&refname, it)) {
+            std::string name = refname;
+            if (name.find("refs/tags/") != std::string::npos) {
+                if (!git_reference_name_to_id(&oid, m_Repo, refname)) {
+                    if (git_oid_tostr(oid_str, GIT_OID_HEXSZ + 1, &oid) != nullptr) {
+                        ct::replaceString(name, "refs/tags/", "");
+                        std::string sha1 = oid_str;
+                        m_Tags[name];
+                    }
+                }
+            } 
+        }
+        git_reference_iterator_free(it);
     }
 }

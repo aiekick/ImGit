@@ -2,8 +2,11 @@
 
 #include <Backend/MainBackend.h>
 #include <ctools/FileHelper.h>
+#include <Models/Git/GitRepositery.h>
+#include <Models/Git/GitCommit.h>
 
 #include <Models/Git/GitBranch.h>
+#include <Res/fontIcons.h>
 
 #include <git2.h>
 
@@ -110,6 +113,73 @@ bool GitGui::drawDialogs() {
     return false;
 }
 
+bool GitGui::drawObjects() {
+    auto ptr = m_CurrentRepo.lock();
+    if (ptr != nullptr) {
+        const auto& branchs = ptr->GetBranchsRef();
+        auto target_count = (uint32_t)branchs.size();
+
+        // LOCAL Branchs
+        auto local_branchs = branchs.find(GIT_LOCAL_TARGET);
+        if (local_branchs != branchs.end()) {
+            --target_count; // is used for remotes
+            if (ImGui::TreeNode("LOCAL_BRANCHS", "Locals (%u)", (uint32_t)local_branchs->second.size())) {
+                ImGui::Indent();
+                auto head_branch_ptr = ptr->GetHeadBranch().lock().get();
+                for (const auto& branch : local_branchs->second) {
+                    auto str = ct::toStr("%s %s", branch.first.c_str(), branch.second.get() == head_branch_ptr ? ICON_IMGIT_STAR : "");
+                    if (ImGui::Selectable(str.c_str())) {
+                        CTOOL_DEBUG_BREAK;
+                    }
+                }
+                ImGui::Unindent();
+                ImGui::TreePop();
+            }
+        }
+        
+        auto tags_branchs = branchs.find(GIT_TAG_TARGET);
+        if (tags_branchs != branchs.end()) {
+            --target_count;  // is used for remotes
+
+        }
+
+        // REMOTES Branchs
+        if (ImGui::TreeNode("REMOTE_BRANCHS", "Remotes (%u)", target_count)) {
+            for (const auto& type : branchs) {
+                if (type.first == GIT_LOCAL_TARGET || type.first == GIT_TAG_TARGET) {
+                    continue;
+                }
+                if (ImGui::TreeNode(&type.first, "%s (%u)", type.first.c_str(), (uint32_t)type.second.size())) {
+                    ImGui::Indent();
+                    for (const auto& branch : type.second) {
+                        if (ImGui::Selectable(branch.first.c_str())) {
+                            CTOOL_DEBUG_BREAK;
+                        }
+                    }
+                    ImGui::Unindent();
+                    ImGui::TreePop();
+                }
+            }
+            ImGui::TreePop();
+        }
+
+        // TAGS
+        if (tags_branchs != branchs.end()) {
+            if (ImGui::TreeNode("TAGS_BRANCHS", "Tags (%u)", (uint32_t)tags_branchs->second.size())) {
+                ImGui::Indent();
+                for (const auto& tag : tags_branchs->second) {
+                    if (ImGui::Selectable(tag.first.c_str())) {
+                        CTOOL_DEBUG_BREAK;
+                    }
+                }
+                ImGui::Unindent();
+                ImGui::TreePop();
+            }
+        }
+    }
+    return false;
+}
+
 bool GitGui::m_drawGraphNode(const float& vLastPosX, GitRepositeryPtr vRepositery, GitCommitPtr vCommitPtr, const float& vTextLineHeight) {
     assert(vRepositery != nullptr);
     assert(vCommitPtr != nullptr);
@@ -122,20 +192,26 @@ bool GitGui::m_drawGraphNode(const float& vLastPosX, GitRepositeryPtr vRepositer
     drawlist->AddRectFilled(ImVec2(vLastPosX, win->DC.CursorPos.y + ImGui::GetTextLineHeight() * 0.5f - 1.0f),
                             win->DC.CursorPos + ImVec2(margin + 10.0f * (vCommitPtr->graphColumn + 1U), ImGui::GetTextLineHeight() * 0.5f + 1.0f),
                             finalCol);
-    const auto& lastCommits = vRepositery->GetLastCommitsPerBranch();
+    GitDate lastCommitDate = 0;
     for (size_t i = 0U; i <= vCommitPtr->maxGraphColumn; i++) {
         const auto& branchColor = vRepositery->GetBranchColorFromIndex(i);
         const auto& bgCol = ImGui::GetColorU32(ImVec4(branchColor.x, branchColor.y, branchColor.z, 1.0f));
         const auto& offset = margin + 10.0f * i;
         const auto& pos = win->DC.CursorPos + ImVec2(offset, 0.0f);
-        const auto& lastCommit = lastCommits->at(vCommitPtr->branchPtrId);
+        auto branch_ptr = vCommitPtr->branch.lock();
+        if (branch_ptr != nullptr) {
+            auto last_commit_ptr = branch_ptr->lastCommit.lock();
+            if (last_commit_ptr != nullptr) {
+                lastCommitDate = last_commit_ptr->dateEpoch;
+            }
+        }
         if (i == vCommitPtr->graphColumn && vCommitPtr->isNewbranch) {  // this node graph column
             drawlist->AddRectFilled(pos + ImVec2(10.0f, 0.0f), pos + ImVec2(12.0f, ImGui::GetTextLineHeight() * 0.5f), bgCol);
         } else if (i == vCommitPtr->graphColumn && vCommitPtr->isLastCommit) {  // last commit
             drawlist->AddRectFilled(pos + ImVec2(10.0f, ImGui::GetTextLineHeight() * 0.5f), pos + ImVec2(12.0f, vTextLineHeight), bgCol);
         } else if (vCommitPtr->isRoot) {  // first commit
             drawlist->AddRectFilled(pos + ImVec2(10.0f, 0.0f), pos + ImVec2(12.0f, ImGui::GetTextLineHeight() * 0.5f), bgCol);
-        } else if (vCommitPtr->dateEpoch < lastCommit->dateEpoch) {  // others
+        } else if (vCommitPtr->dateEpoch < lastCommitDate) {  // others
             drawlist->AddRectFilled(pos + ImVec2(10.0f, 0.0f), pos + ImVec2(12.0f, vTextLineHeight), bgCol);
         }
         if (i == vCommitPtr->graphColumn) {
@@ -173,17 +249,18 @@ bool GitGui::drawHistory() {
                     continue;
                 }
                 const auto infos = commits.at(i);
-                if (!infos.use_count()) {
+                if (infos == nullptr) {
                     continue;
                 }
-                if (infos->branch.use_count()) {
+                auto branch_ptr = infos->branch.lock();
+                if (branch_ptr != nullptr) {
                     ImGui::TableNextRow();
                     bool selected = false;
                     float _branchEndPosX = 0.0f;
                     if (ImGui::TableNextColumn()) {  // branch
-                        const auto& bgCol = ImGui::GetColorU32(ImVec4(infos->branch->color.x, infos->branch->color.y, infos->branch->color.z, 1.0f));
+                        const auto& bgCol = ImGui::GetColorU32(ImVec4(branch_ptr->color.x, branch_ptr->color.y, branch_ptr->color.z, 1.0f));
                         // https://stackoverflow.com/questions/58044749/how-to-right-align-text-in-imgui-columns
-                        const auto& textSize = ImGui::CalcTextSize(infos->branch->name.c_str());
+                        const auto& textSize = ImGui::CalcTextSize(branch_ptr->name.c_str());
                         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - textSize.x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
                         const auto& win = ImGui::GetCurrentWindow();
                         const auto& pos = win->DC.CursorPos;
@@ -193,7 +270,7 @@ bool GitGui::drawHistory() {
                         _branchEndPosX = pos.x + textSize.x + ImGui::GetStyle().ItemSpacing.x;
                         const bool pushed =
                             ImGui::PushStyleColorWithContrast4(bgCol, ImGuiCol_Text, ImGui::CustomStyle::puContrastedTextColor, ImGui::CustomStyle::puContrastRatio);
-                        ImGui::Text("%s", infos->branch->name.c_str());
+                        ImGui::Text("%s", branch_ptr->name.c_str());
                         if (pushed)
                             ImGui::PopStyleColor();
                     }

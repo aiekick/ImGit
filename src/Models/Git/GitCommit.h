@@ -5,6 +5,8 @@
 #include <vector>
 #include <memory>
 
+#include <Headers/globals.h>
+
 enum class GitGraphNodeEnum
 {
 	NONE = 0,				// empty
@@ -14,36 +16,33 @@ enum class GitGraphNodeEnum
 	END_NODE				// from bottom to middle with node
 };
 
-class GitCommit;
-typedef std::shared_ptr<GitCommit> GitCommitPtr;
-typedef std::weak_ptr<GitCommit> GitCommitWeak;
-
 typedef int64_t GitDate;
-class GitBranch;
-class GitCommit
-{
+
+class GitCommit {
 public:
-	std::string id;								// commit id
-	std::string idShort;						// commit id on 7 chars
-	std::string authorName;						// author name
-	std::string authorMail;						// author mail
-	std::string date;							// date
-	GitDate dateEpoch = 0;						// date in format epoh
-	std::string msg;							// message
-	std::string msgOneLine;						// message in one line (only the first line, unitl '\n')
-	std::shared_ptr<GitBranch> branch;			// branch of the commit
-	intptr_t branchPtrId = 0;					// branch ptr conversion ot intptr for avoid calculation in loops
-	std::set<std::string> branchs;				// branchs appartenance
-	std::set<std::string> parentIds;			// parent short ids (mini => 1, maxi => no limit, but in usual cases, its 2)
-	size_t msgSize = 0;							// message length/size
-	size_t graphColumn = 0U;					// column for the graph node
-	size_t maxGraphColumn = 0U;					// max column for the graph at this commit
-	std::vector<GitGraphNodeEnum> nodeTypes;	// type de node de graph
-	bool isRoot = false;						// first commit
-	bool isNewbranch = false;					// just new branch is created
-	bool isLastCommit = false;					// last commit fo current branch
+    std::string id;                           // commit id
+    std::string idShort;                      // commit id on 7 chars
+    std::string authorName;                   // author name
+    std::string authorMail;                   // author mail
+    std::string date;                         // date
+    GitDate dateEpoch = 0;                    // date in format epoh
+    std::string msg;                          // message
+    std::string msgOneLine;                   // message in one line (only the first line, unitl '\n')
+    GitBranchWeak branch;                      // branch of the commit
+    intptr_t branchPtrId = 0;                 // branch ptr conversion ot intptr for avoid calculation in loops
+    std::set<std::string> branchs;            // branchs appartenance
+    std::set<std::string> parentIds;          // parent short ids (mini => 1, maxi => no limit, but in usual cases, its 2)
+    size_t msgSize = 0;                       // message length/size
+    size_t graphColumn = 0U;                  // column for the graph node
+    size_t maxGraphColumn = 0U;               // max column for the graph at this commit
+    std::vector<GitGraphNodeEnum> nodeTypes;  // type de node de graph
+    bool isRoot = false;                      // first commit
+    bool isNewbranch = false;                 // just new branch is created
+    bool isLastCommit = false;                // last commit fo current branch
+    bool isTag = false; // is a tag
 
 public:
-	GitCommit();
-	~GitCommit();
+    GitCommit();
+    ~GitCommit();
 };
+
