@@ -15,6 +15,7 @@ private:
     GitRepositeryWeak m_CurrentRepo;
     GitRepositeryWeak m_RepoToCloseDeferred;
     ImGuiListClipper m_HistoryClipper;
+    GitCommitWeak m_SelectedCommit;
 
 public:
     bool init();
@@ -36,7 +37,7 @@ public:
     virtual bool setFromXml(tinyxml2::XMLElement* vElem, tinyxml2::XMLElement* vParent, const std::string& vUserDatas) override;
 
 private:
-    bool m_drawGraphNode(const float& vLastPosX, GitRepositeryPtr vRepositery, GitCommitPtr vCommit, const float& vTextLineHeight);
+    bool m_drawGraphNode(const float& vLastPosX, GitRepositeryPtr vRepositery, GitCommitPtr vCurrentCommitPtr, GitCommitPtr vLastCommitPtr, const float& vTextLineHeight);
 
 public:  // singleton
     static GitGui* Instance() {

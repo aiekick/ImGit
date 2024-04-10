@@ -3,6 +3,7 @@
 #include <git2.h>
 #include <ctools/cTools.h>
 #include <Headers/globals.h>
+#include <Utils/SearchableVector.hpp>
 
 #include <string>
 #include <unordered_map>
@@ -32,7 +33,7 @@ typedef std::unordered_map<std::string, GitCommitPtr> GitCommitsDataBase;
 /// GitHistoryCollection
 /// all commit ptrs
 /// </summary>
-typedef std::vector<GitCommitPtr> GitHistoryCollection;
+typedef SearchableVector<std::string, GitCommitPtr> GitHistoryCollection;
 
 /// <summary>
 /// GitTags

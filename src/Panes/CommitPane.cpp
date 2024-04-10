@@ -34,6 +34,7 @@ bool CommitPane::DrawPanes(const uint32_t& /*vCurrentFrame*/, bool* vOpened, ImG
             else
                 flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus /* | ImGuiWindowFlags_MenuBar*/;
 #endif
+            m_DrawCommitInfos();
         }
 
         ImGui::End();
@@ -54,4 +55,33 @@ bool CommitPane::DrawDialogsAndPopups(const uint32_t& /*vCurrentFrame*/, const I
 bool CommitPane::DrawWidgets(const uint32_t& /*vCurrentFrame*/, ImGuiContext* vContextPtr, void* /*vUserDatas*/) {
     ImGui::SetCurrentContext(vContextPtr);
     return false;
+}
+
+void CommitPane::SelectCommit(const GitCommitWeak& vCommit) {
+    m_SelectedCommit = vCommit;
+}
+
+void CommitPane::m_DrawCommitInfos() {
+    auto ptr = m_SelectedCommit.lock();
+    if (ptr != nullptr) {
+        ImGui::Header("ID's");
+        ImGui::Text("ID long  : %s", ptr->id.c_str());
+        ImGui::Text("ID short : %s", ptr->idShort.c_str());
+        ImGui::Header("Parent(s)");
+        if (ptr->parentIds.empty()) {
+            ImGui::Text("-");
+        }
+        for (const auto& id : ptr->parentIds) {
+            ImGui::Text("%s", id.c_str());
+        }
+        ImGui::Header("Childs(s)");
+        if (ptr->childIds.empty()) {
+            ImGui::Text("-");
+        }
+        for (const auto& id : ptr->childIds) {
+            ImGui::Text("%s", id.c_str());
+        }
+        ImGui::Header("Message");
+        ImGui::TextWrapped("%s", ptr->msg.c_str());
+    }
 }

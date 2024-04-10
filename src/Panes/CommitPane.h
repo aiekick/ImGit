@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Models/Git/GitCommit.h>
+
 #include <ImGuiPack.h>
 #include <cstdint>
 #include <memory>
@@ -8,6 +10,7 @@
 class ProjectFile;
 class CommitPane : public AbstractPane {
 private:
+    GitCommitWeak m_SelectedCommit;
 
 public:
     bool Init() override;
@@ -19,6 +22,11 @@ public:
         const uint32_t& vCurrentFrame, bool* vOpened = nullptr, ImGuiContext* vContextPtr = nullptr, void* vUserDatas = nullptr) override;
     bool DrawDialogsAndPopups(
         const uint32_t& vCurrentFrame, const ImVec2& vMaxSize, ImGuiContext* vContextPtr = nullptr, void* vUserDatas = nullptr) override;
+
+    void SelectCommit(const GitCommitWeak& vCommit);
+
+private:
+    void m_DrawCommitInfos();
 
 public:  // singleton
     static std::shared_ptr<CommitPane> Instance() {

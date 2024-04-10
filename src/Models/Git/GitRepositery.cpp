@@ -126,7 +126,7 @@ void GitRepositery::m_RetrieveHistory(const std::string& vBanchType, const std::
             if (vBanchType == GIT_LOCAL_TARGET) {
                 auto str = "refs/heads/" + vBranchName;
                 if (git_revwalk_push_ref(s.walker, str.c_str()) != 0) {
-                    LogVarError("Could not find repository for branch %s\n", vBranchName.c_str());
+                    LogVarError("Could not find repository for branch %s", vBranchName.c_str());
                     git_revwalk_free(s.walker);
                     return;
                 }
@@ -134,7 +134,7 @@ void GitRepositery::m_RetrieveHistory(const std::string& vBanchType, const std::
             } else if (vBanchType == GIT_TAG_TARGET) {
                 auto str = "refs/tags/" + vBranchName;
                 if (git_revwalk_push_ref(s.walker, str.c_str()) != 0) {
-                    LogVarError("Could not find repository for branch %s\n", vBranchName.c_str());
+                    LogVarError("Could not find repository for branch %s", vBranchName.c_str());
                     git_revwalk_free(s.walker);
                     return;
                 }
@@ -142,7 +142,7 @@ void GitRepositery::m_RetrieveHistory(const std::string& vBanchType, const std::
             } else {
                 auto str = "refs/remotes/" + vBanchType + "/" + vBranchName;
                 if (git_revwalk_push_ref(s.walker, str.c_str()) != 0) {
-                    LogVarError("Could not find repository for branch %s\n", vBranchName.c_str());
+                    LogVarError("Could not find repository for branch %s", vBranchName.c_str());
                     git_revwalk_free(s.walker);
                     return;
                 }
@@ -195,7 +195,7 @@ void GitRepositery::m_RetrieveHistory(const std::string& vBanchType, const std::
 
                 auto orgGitRepo = git_commit_owner(commit);
                 if (orgGitRepo != m_Repo) {
-                    LogVarError("Repo not the same\n");
+                    LogVarError("Repo not the same");
                 }
 
                 uint32_t count_parent = git_commit_parentcount(commit);
@@ -217,6 +217,12 @@ void GitRepositery::m_RetrieveHistory(const std::string& vBanchType, const std::
                         }
                     }
                     gitCommit->msg += "\n";
+                } else if (count_parent == 1U) {
+                    gitCommit->parentIds.clear();
+                    auto oid = git_commit_parent_id(commit, 0);
+                    git_oid_tostr(buf, sizeof(buf), oid);
+                    auto parent_long_id = std::string(buf);
+                    gitCommit->parentIds.emplace(parent_long_id);
                 }
 
                 const git_signature* sig = git_commit_author(commit);
@@ -236,10 +242,15 @@ void GitRepositery::m_RetrieveHistory(const std::string& vBanchType, const std::
                 gitCommit->msg += git_commit_message(commit);
                 gitCommit->msgSize = gitCommit->msg.size();
 
-                gitCommit->branch = GetBranch(m_CurrentHistoryBranch);
-                auto branch_ptr = gitCommit->branch.lock();
-                assert(branch_ptr != nullptr);
-                gitCommit->graphColumn = branch_ptr->graphColumn;
+                if (vBanchType != GIT_TAG_TARGET) {
+                    gitCommit->branch = GetBranch(m_CurrentHistoryBranch);
+                    auto branch_ptr = gitCommit->branch.lock();
+                    assert(branch_ptr != nullptr);
+                    gitCommit->branchPtrId = (intptr_t)(branch_ptr.get());
+                } else {
+                    currentBranch->name = "deleted";
+                    gitCommit->branch = currentBranch;
+                }
 
                 currentBranch->nUnCommits++;
 
@@ -259,8 +270,6 @@ void GitRepositery::m_RetrieveHistory(const std::string& vBanchType, const std::
                     m_Tags[vBranchName] = gitCommit;
                 }
 
-                gitCommit->branchPtrId = (intptr_t)(branch_ptr.get());
-
                 m_CommitsDatabase[gitCommit->id] = gitCommit;
                 currentBranch->lastCommit = gitCommit;
             } else {
@@ -277,7 +286,7 @@ void GitRepositery::m_RetrieveHistory(const std::string& vBanchType, const std::
 /// </summary>
 /// <param name="vCommitPtr"></param>
 /// <param name="vLevel"></param>
-void recurs_explore_merging(GitCommit *vCommitPtr, const int32_t& vLevel) {
+void recurs_explore_merging(GitCommit *vCommitPtr) {
 
 }
 
@@ -286,14 +295,14 @@ void GitRepositery::m_FinalizeRetrieveHistory(const std::string& vBranchName) {
 
     if (vBranchName.empty()) {
         for (const auto& c : m_CommitsDatabase) {
-            m_History.push_back(c.second);
+            m_History.try_add(c.second->id, c.second);
         }
     } else {
         for (const auto& c : m_CommitsDatabase) {
             auto branch_ptr = c.second->branch.lock();
             if (branch_ptr != nullptr) {
                 if (branch_ptr->name == vBranchName) {
-                    m_History.push_back(c.second);
+                    m_History.try_add(c.second->id, c.second);
                 }
             }
         }
@@ -305,6 +314,21 @@ void GitRepositery::m_FinalizeRetrieveHistory(const std::string& vBranchName) {
         return (a->dateEpoch > b->dateEpoch);
     });
 
+    // consolide childs from parents
+    for (const auto& c : m_CommitsDatabase) {
+        auto& childCommitPtr = c.second;
+        if (childCommitPtr != nullptr) {
+            for (const auto& parent_id : childCommitPtr->parentIds) {
+                if (m_CommitsDatabase.find(parent_id) != m_CommitsDatabase.end()) {  // found
+                    auto& parentCommitPtr = m_CommitsDatabase.at(parent_id);
+                    if (parentCommitPtr != nullptr) {
+                        parentCommitPtr->childIds.emplace(childCommitPtr->id);
+                    }
+                }
+            }
+        }
+    }
+
     // here we must compute the infos for display the graph as good with branchs, merges, etc...
     // we must set :
     // isNewbranch
@@ -313,37 +337,49 @@ void GitRepositery::m_FinalizeRetrieveHistory(const std::string& vBranchName) {
     GitBranch* last_branch_ptr = nullptr;
     GitBranch* curr_branch_ptr = nullptr;
     GitCommit* last_commit_ptr = nullptr;
-    for (auto it = m_History.rbegin(); it != m_History.rend(); ++it) {
-        auto commit_ptr = (*it);
+    GitCommit* next_commit_ptr = nullptr;
+    const auto& historySize = m_History.size();
+    for (size_t idx = 0; idx < historySize; ++idx) {
+        const auto& invIdx = historySize - 1 - idx;
+        auto commit_ptr = m_History.at(invIdx);
         if (commit_ptr != nullptr) {
             curr_branch_ptr = nullptr;
             if (!commit_ptr->branch.expired()) {
                 curr_branch_ptr = commit_ptr->branch.lock().get();
             }
-            if (curr_branch_ptr != last_branch_ptr) {
-                //commit_ptr->isNewbranch = true;
-                //commit_ptr->graphColumn = maxGraphColumn;
-                //++maxGraphColumn;
-                //commit_ptr->maxGraphColumn = maxGraphColumn;
+
+            if (idx < historySize - 1) {
+                next_commit_ptr = m_History.at(invIdx - 1).get();
             }
+
+            if (commit_ptr->parentIds.empty()) {
+                commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::START_NODE);
+            } else if (commit_ptr->childIds.empty()) {
+                commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::END_NODE);
+            } else {
+                commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::TRAVERSAL_NODE);
+            }
+
             if (last_commit_ptr != nullptr) {
-                for (const auto& id : commit_ptr->parentIds) {
-                    if (id == last_commit_ptr->id) {
-                        if (commit_ptr->isMerging) {
-                            if (last_commit_ptr->graphColumn > 0) {
-                                commit_ptr->graphColumn = last_commit_ptr->graphColumn - 1;
-                            }
+                if (commit_ptr->parentIds.size() > 1) {
+                    for (const auto& id : commit_ptr->parentIds) {
+                        if (id == last_commit_ptr->id) {
                         } else {
-                            commit_ptr->graphColumn = last_commit_ptr->graphColumn;
+                            commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::CORNER_BOTTOM_LEFT);
                         }
-                    } else {
-                        recurs_explore_merging(last_commit_ptr, last_commit_ptr->graphColumn + 1);
-                        last_commit_ptr->isNewbranch = true;
-                        last_commit_ptr->graphColumn += 1;
-                        last_commit_ptr->maxGraphColumn = ct::maxi(last_commit_ptr->graphColumn, last_commit_ptr->maxGraphColumn);
                     }
                 }
-                commit_ptr->maxGraphColumn = ct::maxi(commit_ptr->graphColumn, commit_ptr->maxGraphColumn);
+            }
+
+            if (next_commit_ptr != nullptr) {
+                if (commit_ptr->childIds.size() > 1) {
+                    for (const auto& id : commit_ptr->childIds) {
+                        if (id == next_commit_ptr->id) {
+                        } else {
+                            commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::CORNER_LEFT_TOP);
+                        }
+                    }
+                }
             }
 
             last_branch_ptr = curr_branch_ptr;

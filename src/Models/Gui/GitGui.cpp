@@ -8,6 +8,8 @@
 #include <Models/Git/GitBranch.h>
 #include <Res/fontIcons.h>
 
+#include <Panes/CommitPane.h>
+
 #include <git2.h>
 
 bool GitGui::init() {
@@ -180,43 +182,74 @@ bool GitGui::drawObjects() {
     return false;
 }
 
-bool GitGui::m_drawGraphNode(const float& vLastPosX, GitRepositeryPtr vRepositery, GitCommitPtr vCommitPtr, const float& vTextLineHeight) {
+bool GitGui::m_drawGraphNode(const float& vLastPosX, GitRepositeryPtr vRepositery, GitCommitPtr vCurrentCommitPtr, GitCommitPtr vLastCommitPtr, const float& vTextLineHeight) {
     assert(vRepositery != nullptr);
-    assert(vCommitPtr != nullptr);
+    assert(vCurrentCommitPtr != nullptr);
+    const auto& startMargin = 5.0f;
     const auto& margin = 10.0f;
     const auto& win = ImGui::GetCurrentWindow();
     const auto& drawlist = win->DrawList;
-    //const auto& colWidth = ImGui::GetColumnWidth();
-    const auto& branchColor = vRepositery->GetBranchColorFromIndex(vCommitPtr->graphColumn);
+    const auto& branchColor = vRepositery->GetBranchColorFromIndex(vCurrentCommitPtr->startNodeColumn);
     const auto& finalCol = ImGui::GetColorU32(ImVec4(branchColor.x, branchColor.y, branchColor.z, 1.0f));
-    drawlist->AddRectFilled(ImVec2(vLastPosX, win->DC.CursorPos.y + ImGui::GetTextLineHeight() * 0.5f - 1.0f),
-                            win->DC.CursorPos + ImVec2(margin + 10.0f * (vCommitPtr->graphColumn + 1U), ImGui::GetTextLineHeight() * 0.5f + 1.0f),
-                            finalCol);
-    GitDate lastCommitDate = 0;
-    for (size_t i = 0U; i <= vCommitPtr->maxGraphColumn; i++) {
-        const auto& branchColor = vRepositery->GetBranchColorFromIndex(i);
-        const auto& bgCol = ImGui::GetColorU32(ImVec4(branchColor.x, branchColor.y, branchColor.z, 1.0f));
-        const auto& offset = margin + 10.0f * i;
-        const auto& pos = win->DC.CursorPos + ImVec2(offset, 0.0f);
-        auto branch_ptr = vCommitPtr->branch.lock();
-        if (branch_ptr != nullptr) {
-            auto last_commit_ptr = branch_ptr->lastCommit.lock();
-            if (last_commit_ptr != nullptr) {
-                lastCommitDate = last_commit_ptr->dateEpoch;
+    const auto& lineThickness = 1.5f;
+    const auto& circleRadius = 3.0f;
+    drawlist->AddLine(ImVec2(vLastPosX, win->DC.CursorPos.y + ImGui::GetTextLineHeight() * 0.5f),
+                      win->DC.CursorPos + ImVec2(startMargin + margin * vCurrentCommitPtr->startNodeColumn, ImGui::GetTextLineHeight() * 0.5f),
+                      finalCol,
+                      lineThickness);
+
+    ImVec2 lastPos;
+    ImVec2 p0,p1;
+    for (size_t idx = 0; idx < vCurrentCommitPtr->nodeColumns.size(); ++idx) {
+        const auto& nodeType = vCurrentCommitPtr->nodeColumns.at(idx);
+        if (nodeType != GitGraphNodeEnum::NONE) {
+            const auto& branchColor = vRepositery->GetBranchColorFromIndex(idx);
+            const auto& bgCol = ImGui::GetColorU32(ImVec4(branchColor.x, branchColor.y, branchColor.z, 1.0f));
+            const auto& offset = startMargin + margin * idx;
+            const auto& pos = win->DC.CursorPos + ImVec2(offset, 0.0f);
+            const auto& centerPos = pos + ImVec2(0.0f, ImGui::GetTextLineHeight() * 0.5f);
+            const auto& topPos = pos + ImVec2(0.0f, 0.0f);
+            const auto& bottomPos = pos + ImVec2(0.0f, vTextLineHeight);
+            const auto& leftPos = lastPos + ImVec2(0.0f, ImGui::GetTextLineHeight() * 0.5f);
+
+            switch (nodeType) {
+                case GitGraphNodeEnum::TRAVERSAL_NO_NODE:  // from bottom to top without node
+                    //drawlist->AddRectFilled(pos + ImVec2(margin, 0.0f), pos + ImVec2(12.0f, vTextLineHeight), bgCol);
+                    break;
+                case GitGraphNodeEnum::TRAVERSAL_NODE:  // from bottom to top with node
+                    drawlist->AddLine(bottomPos, topPos, bgCol, lineThickness);
+                    drawlist->AddCircleFilled(centerPos, circleRadius, bgCol, 12);
+                    break;
+                case GitGraphNodeEnum::START_NODE:  // from middle to top with node
+                    drawlist->AddLine(centerPos, topPos, bgCol, lineThickness);
+                    drawlist->AddCircleFilled(centerPos, circleRadius, bgCol, 12);
+                    break;
+                case GitGraphNodeEnum::END_NODE:  // from bottom to middle with node
+                    drawlist->AddLine(bottomPos, centerPos, bgCol, lineThickness);
+                    drawlist->AddCircleFilled(centerPos, circleRadius, bgCol, 12);
+                    break;
+                case GitGraphNodeEnum::CORNER_LEFT_TOP:  // a Corner from left to top
+                    if (idx > 0) {
+                        // left to center
+                        drawlist->AddLine(leftPos, centerPos, bgCol, lineThickness);
+                        // center to top               ;
+                        drawlist->AddLine(centerPos, topPos, bgCol, lineThickness);
+                    }
+                    break;
+                case GitGraphNodeEnum::CORNER_BOTTOM_LEFT:  // a Corner from bottom to left
+                    if (idx > 0) {
+                        // bottom to center
+                        drawlist->AddLine(bottomPos, centerPos, bgCol, lineThickness);
+                        // center to left
+                        drawlist->AddLine(centerPos, leftPos, bgCol, lineThickness);
+                    }
+                    break;
+                case GitGraphNodeEnum::NONE:  // empty
+                default: break;
             }
-        }
-        if (i == vCommitPtr->graphColumn && vCommitPtr->isNewbranch) {  // this node graph column
-            drawlist->AddRectFilled(pos + ImVec2(10.0f, 0.0f), pos + ImVec2(12.0f, ImGui::GetTextLineHeight() * 0.5f), bgCol);
-        } else if (i == vCommitPtr->graphColumn && vCommitPtr->isLastCommit) {  // last commit
-            drawlist->AddRectFilled(pos + ImVec2(10.0f, ImGui::GetTextLineHeight() * 0.5f), pos + ImVec2(12.0f, vTextLineHeight), bgCol);
-        } else if (vCommitPtr->isRoot) {  // first commit
-            drawlist->AddRectFilled(pos + ImVec2(10.0f, 0.0f), pos + ImVec2(12.0f, ImGui::GetTextLineHeight() * 0.5f), bgCol);
-        } else if (vCommitPtr->dateEpoch < lastCommitDate) {  // others
-            drawlist->AddRectFilled(pos + ImVec2(10.0f, 0.0f), pos + ImVec2(12.0f, vTextLineHeight), bgCol);
-        }
-        if (i == vCommitPtr->graphColumn) {
-            drawlist->AddCircleFilled(pos + ImVec2(11.0f, ImGui::GetTextLineHeight() * 0.5f), 5.0f, bgCol, 12);
-        }
+
+            lastPos = pos;
+        }        
     }
     return false;
 }
@@ -241,6 +274,8 @@ bool GitGui::drawHistory() {
         ImGui::TableSetupColumn("Author", ImGuiTableColumnFlags_WidthFixed, -1, 4);
         ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, -1, 5);
         ImGui::TableHeadersRow();
+        GitCommitPtr currentCommitPtr = nullptr;
+        GitCommitPtr lastCommitPtr = nullptr;
         const auto& textLineHeight = ImGui::GetTextLineHeightWithSpacing();
         m_HistoryClipper.Begin((int)commits.size(), textLineHeight);
         while (m_HistoryClipper.Step()) {
@@ -248,11 +283,15 @@ bool GitGui::drawHistory() {
                 if (i < 0) {
                     continue;
                 }
-                const auto infos = commits.at(i);
-                if (infos == nullptr) {
+                lastCommitPtr = nullptr;
+                if (i > 0) {
+                    lastCommitPtr = commits.at(i - 1);
+                }
+                currentCommitPtr = commits.at(i);
+                if (currentCommitPtr == nullptr) {
                     continue;
                 }
-                auto branch_ptr = infos->branch.lock();
+                auto branch_ptr = currentCommitPtr->branch.lock();
                 if (branch_ptr != nullptr) {
                     ImGui::TableNextRow();
                     bool selected = false;
@@ -276,19 +315,27 @@ bool GitGui::drawHistory() {
                         }
                     }
                     if (ImGui::TableNextColumn()) {  // graph
-                        m_drawGraphNode(_branchEndPosX, ptr, infos, textLineHeight);
+                        m_drawGraphNode(_branchEndPosX, ptr, currentCommitPtr, lastCommitPtr, textLineHeight);
                     }
                     if (ImGui::TableNextColumn()) {  // id
-                        ImGui::Text("%s", infos->idShort.c_str());
+                        ImGui::Text("%s", currentCommitPtr->idShort.c_str());
                     }
                     if (ImGui::TableNextColumn()) {  // Message
-                        ImGui::Selectable(infos->msgOneLine.c_str(), &selected, ImGuiSelectableFlags_SpanAllColumns);
+                        if (m_SelectedCommit.lock() == currentCommitPtr) {
+                            selected = true;
+                        }
+                        ImGui::PushID(i);
+                        if (ImGui::Selectable(currentCommitPtr->msgOneLine.c_str(), &selected, ImGuiSelectableFlags_SpanAllColumns)) {
+                            m_SelectedCommit = currentCommitPtr;
+                            CommitPane::Instance()->SelectCommit(currentCommitPtr);
+                        }
+                        ImGui::PopID();
                     }
                     if (ImGui::TableNextColumn()) {  // Author
-                        ImGui::Text("%s", infos->authorName.c_str());
+                        ImGui::Text("%s", currentCommitPtr->authorName.c_str());
                     }
                     if (ImGui::TableNextColumn()) {  // Date
-                        ImGui::Text("%s", infos->date.c_str());
+                        ImGui::Text("%s", currentCommitPtr->date.c_str());
                     }
                 }
             }
