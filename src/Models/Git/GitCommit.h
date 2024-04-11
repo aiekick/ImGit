@@ -8,13 +8,14 @@
 #include <Headers/globals.h>
 
 enum class GitGraphNodeEnum {
-    NONE = 0,            // empty
-    TRAVERSAL_NO_NODE,   // from bottom to top without node
-    TRAVERSAL_NODE,      // from bottom to top with node
-    START_NODE,          // from middle to top with node
-    END_NODE,            // from bottom to middle with node
-    CORNER_LEFT_TOP,     // a Corner from left to top
-    CORNER_BOTTOM_LEFT,  // a Corner from bottom to left
+    NONE = 0,               // empty
+    TRAVERSAL_NO_NODE,      // from bottom to top without node
+    TRAVERSAL_NODE,         // from bottom to top with node
+    START_NODE,             // from middle to top with node
+    END_NODE,               // from bottom to middle with node
+    CORNER_LEFT_TOP,        // a Corner from left to top (split)
+    CORNER_BOTTOM_LEFT,     // a Corner from bottom to left (collapse)
+    CORNER_BOTTOM_LEFT_TOP  // a Corner from bottom to left¨and from left to top (collapse / split)
 };
 
 typedef int64_t GitDate;
@@ -37,7 +38,10 @@ public:
     size_t msgSize = 0;                         // message length/size
     size_t startNodeColumn = 0U;                // column for the graph node
     std::vector<GitGraphNodeEnum> nodeColumns;  // type de node de graph
+    bool showBranchText = false;                // show the branch text
     bool isRoot = false;                        // first commit
+    bool collapsed = false;                     // collapsed on parent
+    bool splitted = false;                      // splitted on two childs
     bool isNewbranch = false;                   // just new branch is created
     bool isMerging = false;                     // the commit is merging
     bool isLastCommit = false;                  // last commit fo current branch
@@ -47,4 +51,3 @@ public:
     GitCommit();
     ~GitCommit();
 };
-

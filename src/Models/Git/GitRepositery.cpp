@@ -308,10 +308,14 @@ void GitRepositery::m_FinalizeRetrieveHistory(const std::string& vBranchName) {
         }
     }
 
-    std::sort(m_History.begin(), m_History.end(), [](const GitCommitPtr& a, const GitCommitPtr& b) -> bool {
-        if (a->dateEpoch == b->dateEpoch)
-            return (a->id > b->id);
-        return (a->dateEpoch > b->dateEpoch);
+    std::sort(m_History.begin(), m_History.end(), [](const GitCommitWeak& a, const GitCommitWeak& b) -> bool {
+        assert(!a.expired());
+        assert(!b.expired());
+        const auto& pa = a.lock();
+        const auto& pb = b.lock();
+        if (pa->dateEpoch == pb->dateEpoch)
+            return (pa->id > pb->id);
+        return (pa->dateEpoch > pb->dateEpoch);
     });
 
     // consolide childs from parents
@@ -328,64 +332,8 @@ void GitRepositery::m_FinalizeRetrieveHistory(const std::string& vBranchName) {
             }
         }
     }
-
-    // here we must compute the infos for display the graph as good with branchs, merges, etc...
-    // we must set :
-    // isNewbranch
-    // graphColumn
-    // maxGraphColumn
-    GitBranch* last_branch_ptr = nullptr;
-    GitBranch* curr_branch_ptr = nullptr;
-    GitCommit* last_commit_ptr = nullptr;
-    GitCommit* next_commit_ptr = nullptr;
-    const auto& historySize = m_History.size();
-    for (size_t idx = 0; idx < historySize; ++idx) {
-        const auto& invIdx = historySize - 1 - idx;
-        auto commit_ptr = m_History.at(invIdx);
-        if (commit_ptr != nullptr) {
-            curr_branch_ptr = nullptr;
-            if (!commit_ptr->branch.expired()) {
-                curr_branch_ptr = commit_ptr->branch.lock().get();
-            }
-
-            if (idx < historySize - 1) {
-                next_commit_ptr = m_History.at(invIdx - 1).get();
-            }
-
-            if (commit_ptr->parentIds.empty()) {
-                commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::START_NODE);
-            } else if (commit_ptr->childIds.empty()) {
-                commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::END_NODE);
-            } else {
-                commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::TRAVERSAL_NODE);
-            }
-
-            if (last_commit_ptr != nullptr) {
-                if (commit_ptr->parentIds.size() > 1) {
-                    for (const auto& id : commit_ptr->parentIds) {
-                        if (id == last_commit_ptr->id) {
-                        } else {
-                            commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::CORNER_BOTTOM_LEFT);
-                        }
-                    }
-                }
-            }
-
-            if (next_commit_ptr != nullptr) {
-                if (commit_ptr->childIds.size() > 1) {
-                    for (const auto& id : commit_ptr->childIds) {
-                        if (id == next_commit_ptr->id) {
-                        } else {
-                            commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::CORNER_LEFT_TOP);
-                        }
-                    }
-                }
-            }
-
-            last_branch_ptr = curr_branch_ptr;
-            last_commit_ptr = commit_ptr.get();
-        }
-    }
+    
+    m_ConfigureHistoryForGraph();
 
     m_CurrentHistoryBranch = vBranchName;
 
@@ -474,5 +422,83 @@ void GitRepositery::m_RetrieveTags() {
             } 
         }
         git_reference_iterator_free(it);
+    }
+}
+
+void GitRepositery::m_CommitRunner(const GitHistoryCollection& vCollection, GitCommitWeak vCommit, const int32_t& vLevel) {
+    auto commit_ptr = vCommit.lock();
+    if (commit_ptr != nullptr) {
+        commit_ptr->startNodeColumn = vLevel;
+        // we fill empty columns with a empty node
+        while (commit_ptr->nodeColumns.size() < vLevel) {
+            commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::TRAVERSAL_NO_NODE);
+        }
+        // no parents so its a start node
+        if (commit_ptr->parentIds.empty()) {
+            commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::START_NODE);
+        } else {
+            // no childs sp its a end node
+            if (commit_ptr->childIds.empty()) {
+                commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::END_NODE);
+            } else {
+                // else what else than a traversal node
+                commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::TRAVERSAL_NODE);
+                // if 2 or more childs and no root line we collapse and stop the runner
+                if (commit_ptr->childIds.size() > 1 && vLevel > 0) {
+                    commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::CORNER_LEFT_TOP);
+                    commit_ptr->collapsed = true;
+                    // we are at the end of way so we stop the runner
+                    return;
+                }
+            }
+            // start or continue recursion with one new runner for each parents
+            size_t idx = 0;
+            GitCommitWeak commit;
+            for (const auto& parent_id : commit_ptr->parentIds) {
+                if (vCollection.getValue(parent_id, commit)) {
+                    m_CommitRunner(vCollection, commit, vLevel + idx);
+                    if (idx > 0) {
+                        commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::CORNER_BOTTOM_LEFT);
+                        commit_ptr->splitted = true;
+                    }
+                }
+                ++idx;
+            }
+        }
+    }
+}
+
+void GitRepositery::m_ConfigureHistoryForGraph() {
+    if (!m_History.empty()) {
+        m_CommitRunner(m_History, *m_History.begin(), 0);
+
+        /*
+        * o
+        * |
+        * o
+        * |\
+        * | o
+        * o x <- to fill
+        * | o
+        * |/
+        * o
+        * |
+        * o
+        */
+
+        // then fill holes on last columns
+        GitCommit* last_commit_ptr = nullptr;
+        for (const auto& commit : m_History) {
+            auto commit_ptr = commit.lock();
+            if (commit_ptr != nullptr) {
+                // we fill empty columns with a empty node
+                if (last_commit_ptr != nullptr && !last_commit_ptr->collapsed) {
+                    while (commit_ptr->nodeColumns.size() < last_commit_ptr->nodeColumns.size()) {
+                        commit_ptr->nodeColumns.push_back(GitGraphNodeEnum::TRAVERSAL_NO_NODE);
+                    }
+                }
+            }
+            last_commit_ptr = commit_ptr.get();
+        }
     }
 }

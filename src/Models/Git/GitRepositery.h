@@ -33,7 +33,7 @@ typedef std::unordered_map<std::string, GitCommitPtr> GitCommitsDataBase;
 /// GitHistoryCollection
 /// all commit ptrs
 /// </summary>
-typedef SearchableVector<std::string, GitCommitPtr> GitHistoryCollection;
+typedef SearchableVector<std::string, GitCommitWeak> GitHistoryCollection;
 
 /// <summary>
 /// GitTags
@@ -98,4 +98,6 @@ private:
     void m_ClearDatabases();
     void m_RetrieveHistory(const std::string& vBanchType, const std::string& vBranchName, const bool& vResetCollections = true);
     void m_FinalizeRetrieveHistory(const std::string& vBranchName);
+    void m_ConfigureHistoryForGraph();
+    void m_CommitRunner(const GitHistoryCollection& vCollection, GitCommitWeak vCurrCommit, const int32_t& vLevel);
 };

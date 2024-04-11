@@ -37,6 +37,7 @@ public:
     /// return true is the key already exist
     /// </summary>
     bool exist(const KEY_T& vKey) const;
+    bool getValue(const KEY_T& vKey, VALUE_T& vOutValue) const;
 };
 
 template <typename KEY_T, typename VALUE_T>
@@ -141,4 +142,14 @@ bool SearchableVector<KEY_T, VALUE_T>::try_set_if_existing(const KEY_T& vKey, VA
 template <typename KEY_T, typename VALUE_T>
 bool SearchableVector<KEY_T, VALUE_T>::exist(const KEY_T& vKey) const {
     return (m_Dico.find(vKey) != m_Dico.end());
+}
+
+template <typename KEY_T, typename VALUE_T>
+bool SearchableVector<KEY_T, VALUE_T>::getValue(const KEY_T& vKey, VALUE_T& vOutValue) const {
+    if (exist(vKey)) {
+        vOutValue = m_Dico.at(vKey).second;
+        return true;
+    }
+    vOutValue = {};
+    return false;
 }

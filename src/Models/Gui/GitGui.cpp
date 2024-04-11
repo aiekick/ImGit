@@ -193,10 +193,13 @@ bool GitGui::m_drawGraphNode(const float& vLastPosX, GitRepositeryPtr vRepositer
     const auto& finalCol = ImGui::GetColorU32(ImVec4(branchColor.x, branchColor.y, branchColor.z, 1.0f));
     const auto& lineThickness = 1.5f;
     const auto& circleRadius = 3.0f;
-    drawlist->AddLine(ImVec2(vLastPosX, win->DC.CursorPos.y + ImGui::GetTextLineHeight() * 0.5f),
-                      win->DC.CursorPos + ImVec2(startMargin + margin * vCurrentCommitPtr->startNodeColumn, ImGui::GetTextLineHeight() * 0.5f),
-                      finalCol,
-                      lineThickness);
+    if (vLastPosX > 0.0f) {
+        drawlist->AddLine(ImVec2(vLastPosX, win->DC.CursorPos.y + ImGui::GetTextLineHeight() * 0.5f),
+                          win->DC.CursorPos + ImVec2(startMargin + margin * vCurrentCommitPtr->startNodeColumn, ImGui::GetTextLineHeight() * 0.5f),
+                          finalCol,
+                          lineThickness);
+    }
+    
 
     ImVec2 lastPos;
     ImVec2 p0,p1;
@@ -214,7 +217,7 @@ bool GitGui::m_drawGraphNode(const float& vLastPosX, GitRepositeryPtr vRepositer
 
             switch (nodeType) {
                 case GitGraphNodeEnum::TRAVERSAL_NO_NODE:  // from bottom to top without node
-                    //drawlist->AddRectFilled(pos + ImVec2(margin, 0.0f), pos + ImVec2(12.0f, vTextLineHeight), bgCol);
+                    drawlist->AddLine(bottomPos, topPos, bgCol, lineThickness);
                     break;
                 case GitGraphNodeEnum::TRAVERSAL_NODE:  // from bottom to top with node
                     drawlist->AddLine(bottomPos, topPos, bgCol, lineThickness);
@@ -232,12 +235,22 @@ bool GitGui::m_drawGraphNode(const float& vLastPosX, GitRepositeryPtr vRepositer
                     if (idx > 0) {
                         // left to center
                         drawlist->AddLine(leftPos, centerPos, bgCol, lineThickness);
-                        // center to top               ;
+                        // top to center               ;
                         drawlist->AddLine(centerPos, topPos, bgCol, lineThickness);
                     }
                     break;
                 case GitGraphNodeEnum::CORNER_BOTTOM_LEFT:  // a Corner from bottom to left
                     if (idx > 0) {
+                        // left to center
+                        drawlist->AddLine(bottomPos, centerPos, bgCol, lineThickness);
+                        // bottom to center
+                        drawlist->AddLine(centerPos, leftPos, bgCol, lineThickness);
+                    }
+                    break;
+                case GitGraphNodeEnum::CORNER_BOTTOM_LEFT_TOP:  // a Corner from bottom to left
+                    if (idx > 0) {
+                        // left to center               ;
+                        drawlist->AddLine(centerPos, topPos, bgCol, lineThickness);
                         // bottom to center
                         drawlist->AddLine(bottomPos, centerPos, bgCol, lineThickness);
                         // center to left
@@ -274,6 +287,9 @@ bool GitGui::drawHistory() {
         ImGui::TableSetupColumn("Author", ImGuiTableColumnFlags_WidthFixed, -1, 4);
         ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, -1, 5);
         ImGui::TableHeadersRow();
+        bool _isLineSelected = false;
+        float _branchEndPosX = 0.0f;
+        bool _isLineHovered = false;
         GitCommitPtr currentCommitPtr = nullptr;
         GitCommitPtr lastCommitPtr = nullptr;
         const auto& textLineHeight = ImGui::GetTextLineHeightWithSpacing();
@@ -285,56 +301,59 @@ bool GitGui::drawHistory() {
                 }
                 lastCommitPtr = nullptr;
                 if (i > 0) {
-                    lastCommitPtr = commits.at(i - 1);
+                    lastCommitPtr = commits.at(i - 1).lock();
                 }
-                currentCommitPtr = commits.at(i);
+                currentCommitPtr = commits.at(i).lock();
                 if (currentCommitPtr == nullptr) {
                     continue;
                 }
                 auto branch_ptr = currentCommitPtr->branch.lock();
                 if (branch_ptr != nullptr) {
                     ImGui::TableNextRow();
-                    bool selected = false;
-                    float _branchEndPosX = 0.0f;
-                    if (ImGui::TableNextColumn()) {  // branch
-                        const auto& bgCol = ImGui::GetColorU32(ImVec4(branch_ptr->color.x, branch_ptr->color.y, branch_ptr->color.z, 1.0f));
-                        // https://stackoverflow.com/questions/58044749/how-to-right-align-text-in-imgui-columns
-                        const auto& textSize = ImGui::CalcTextSize(branch_ptr->name.c_str());
-                        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - textSize.x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
-                        const auto& win = ImGui::GetCurrentWindow();
-                        const auto& pos = win->DC.CursorPos;
-                        const auto& drawlist = win->DrawList;
-                        drawlist->AddRectFilled(
-                            pos - ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f), pos + textSize + ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f), bgCol, 5.0f);
-                        _branchEndPosX = pos.x + textSize.x + ImGui::GetStyle().ItemSpacing.x;
-                        const bool pushed =
-                            ImGui::PushStyleColorWithContrast4(bgCol, ImGuiCol_Text, ImGui::CustomStyle::puContrastedTextColor, ImGui::CustomStyle::puContrastRatio);
-                        ImGui::Text("%s", branch_ptr->name.c_str());
-                        if (pushed) {
-                            ImGui::PopStyleColor();
-                        }
-                    }
-                    if (ImGui::TableNextColumn()) {  // graph
-                        m_drawGraphNode(_branchEndPosX, ptr, currentCommitPtr, lastCommitPtr, textLineHeight);
-                    }
-                    if (ImGui::TableNextColumn()) {  // id
-                        ImGui::Text("%s", currentCommitPtr->idShort.c_str());
-                    }
-                    if (ImGui::TableNextColumn()) {  // Message
+                    _branchEndPosX = 0.0f;
+                    _isLineSelected = false;
+                    if (ImGui::TableSetColumnIndex(3)) {  // Message
                         if (m_SelectedCommit.lock() == currentCommitPtr) {
-                            selected = true;
+                            _isLineSelected = true;
                         }
                         ImGui::PushID(i);
-                        if (ImGui::Selectable(currentCommitPtr->msgOneLine.c_str(), &selected, ImGuiSelectableFlags_SpanAllColumns)) {
+                        if (ImGui::Selectable(currentCommitPtr->msgOneLine.c_str(), &_isLineSelected, ImGuiSelectableFlags_SpanAllColumns)) {
                             m_SelectedCommit = currentCommitPtr;
                             CommitPane::Instance()->SelectCommit(currentCommitPtr);
                         }
                         ImGui::PopID();
+                        _isLineHovered = ImGui::IsItemHovered();
                     }
-                    if (ImGui::TableNextColumn()) {  // Author
+                    if (ImGui::TableSetColumnIndex(0)) {  // branch
+                        if (currentCommitPtr->showBranchText || _isLineHovered || _isLineSelected) {
+                            const auto& bgCol = ImGui::GetColorU32(ImVec4(branch_ptr->color.x, branch_ptr->color.y, branch_ptr->color.z, 1.0f));
+                            // https://stackoverflow.com/questions/58044749/how-to-right-align-text-in-imgui-columns
+                            const auto& textSize = ImGui::CalcTextSize(branch_ptr->name.c_str());
+                            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - textSize.x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
+                            const auto& win = ImGui::GetCurrentWindow();
+                            const auto& pos = win->DC.CursorPos;
+                            const auto& drawlist = win->DrawList;
+                            drawlist->AddRectFilled(
+                                pos - ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f), pos + textSize + ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f), bgCol, 5.0f);
+                            _branchEndPosX = pos.x + textSize.x + ImGui::GetStyle().ItemSpacing.x;
+                            const bool pushed =
+                                ImGui::PushStyleColorWithContrast4(bgCol, ImGuiCol_Text, ImGui::CustomStyle::puContrastedTextColor, ImGui::CustomStyle::puContrastRatio);
+                            ImGui::Text("%s", branch_ptr->name.c_str());
+                            if (pushed) {
+                                ImGui::PopStyleColor();
+                            }
+                        }
+                    }
+                    if (ImGui::TableSetColumnIndex(1)) {  // graph
+                        m_drawGraphNode(_branchEndPosX, ptr, currentCommitPtr, lastCommitPtr, textLineHeight);
+                    }
+                    if (ImGui::TableSetColumnIndex(2)) {  // id
+                        ImGui::Text("%s", currentCommitPtr->idShort.c_str());
+                    }
+                    if (ImGui::TableSetColumnIndex(4)) {  // Author
                         ImGui::Text("%s", currentCommitPtr->authorName.c_str());
                     }
-                    if (ImGui::TableNextColumn()) {  // Date
+                    if (ImGui::TableSetColumnIndex(5)) {  // Date
                         ImGui::Text("%s", currentCommitPtr->date.c_str());
                     }
                 }
